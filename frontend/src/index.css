@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+:root {
+  --bg-midnight: #10111F;
+  --bg-deep: #0A0B14;
+  --surface-indigo: #191B30;
+  --surface-elevated: #222640;
+  --surface-hover: #292E4C;
+  --surface-glass: rgba(25, 27, 48, 0.75);
+  --cyan-electric: #62E8FF;
+  --violet-neon: #A78BFA;
+  --pink-hot: #FF75D8;
+  --white-soft: #F5F5FF;
+  --green-neon: #10B981;
+  --red-hazard: #FF3366;
+  --border-cyan: rgba(98, 232, 255, 0.28);
+  --border-violet: rgba(167, 139, 250, 0.28);
+  --border-pink: rgba(255, 117, 216, 0.28);
+  --border-subtle: rgba(245, 245, 255, 0.08);
+}
+
+body {
+  background-color: var(--bg-midnight);
+  color: var(--white-soft);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  margin: 0;
+}
+
+/* Cyber Matrix Background Grid */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(98, 232, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(98, 232, 255, 0.03) 1px, transparent 1px);
+}
+
+.cyber-dots {
+  background-image: radial-gradient(rgba(167, 139, 250, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(25, 27, 48, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 245, 255, 0.09);
+}
+
+.glass-panel-elevated {
+  background: rgba(34, 38, 64, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(98, 232, 255, 0.2);
+}
+
+/* Glow Shadow Utilities */
+.glow-cyan {
+  box-shadow: 0 0 25px -5px rgba(98, 232, 255, 0.35);
+}
+
+.glow-pink {
+  box-shadow: 0 0 25px -5px rgba(255, 117, 216, 0.35);
+}
+
+.glow-violet {
+  box-shadow: 0 0 25px -5px rgba(167, 139, 250, 0.35);
+}
+
+.glow-hazard {
+  box-shadow: 0 0 35px -5px rgba(255, 51, 102, 0.45);
+}
+
+/* Animated Scanner Keyframes */
+@keyframes laserScan {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.8;
+  }
+}
+
+.animate-laser {
+  animation: laserScan 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes radarSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar {
+  animation: radarSpin 3.5s linear infinite;
+}
+
+/* Custom Webkit Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0C16;
+}
+::-webkit-scrollbar-thumb {
+  background: #252848;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3B3F6D;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "TruthLens - Cyber Candy AI Media Forensics",
+  "description": "TruthLens AI-powered forensic platform that detects AI-generated and manipulated images, audio, and videos in a Cyber Candy aesthetic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
