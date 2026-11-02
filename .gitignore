@@ -19,3 +19,17 @@ test_audio.wav
 *.flac
 *.ogg
 *.wma
+
+@"
+
+# Local test and dataset media
+new_audio_real/
+new_fake/
+new_real/
+test_audio_big/
+test_audio_deg/
+test_audio_hard/
+test_frames/
+test_images/
+test_audio/
+"@ | Add-Content .gitignore
