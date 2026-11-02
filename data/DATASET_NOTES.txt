@@ -1,0 +1,11 @@
+﻿Dataset: CIFAKE — Real and AI-Generated Synthetic Images
+Source: https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images
+Real images: CIFAR-10
+Fake images: Stable Diffusion 1.4
+Total images: 120,000
+Training images: 100,000
+Test images: 20,000
+Classes: REAL, FAKE
+Image dimensions: 32x32
+License: MIT (as stated by the dataset documentation)
+Limitation: Results may not generalize to modern generators or high-resolution images.
