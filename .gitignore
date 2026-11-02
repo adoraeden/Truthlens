@@ -10,3 +10,12 @@ UniversalFakeDetect/
 data/kaggle_image/
 
 test_images/
+test_audio/
+test_audio.wav
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.wma
