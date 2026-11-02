@@ -8,3 +8,5 @@ __pycache__/
 Community-Forensics/
 UniversalFakeDetect/
 data/kaggle_image/
+
+test_images/
