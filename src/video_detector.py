@@ -157,6 +157,7 @@ class VideoDetector:
                             audio_path,
                             source_duration_seconds=duration,
                             analysis_start_seconds=audio_start,
+                            already_cropped=True,
                         )
                         audio_status = "analyzed"
                     except ValueError:

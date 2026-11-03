@@ -71,6 +71,7 @@ class AudioDetector:
         *,
         source_duration_seconds=None,
         analysis_start_seconds=None,
+        already_cropped=False,
     ):
         audio_path = Path(audio_path)
 
@@ -95,10 +96,12 @@ class AudioDetector:
 
         # Seek and cap decoding in FFmpeg so long recordings do not need to be
         # fully converted and loaded into memory just to analyze one window.
+        # VideoDetector can pass an already-extracted window while retaining
+        # the original video's duration and crop offset for result metadata.
         with tempfile.TemporaryDirectory() as temp_dir:
             wav_path = Path(temp_dir) / "analysis_window.wav"
             command = [self.ffmpeg, "-y", "-v", "error"]
-            if is_center_crop:
+            if is_center_crop and not already_cropped:
                 command.extend(["-ss", f"{crop_start:.6f}"])
             command.extend([
                 "-i", str(audio_path),
