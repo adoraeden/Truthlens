@@ -65,13 +65,16 @@ export const MethodologyView: React.FC<MethodologyViewProps> = ({ backendStatus 
                   <strong className="text-white">Model Architecture:</strong> Fine-tuned ViT-Small/16 image classifier.
                 </div>
                 <div>
-                  <strong className="text-white">Spatial Input:</strong> RGB conversion, shorter-edge resize to 440 pixels, then a 384 &times; 384 center crop with ImageNet normalization. Pixels outside the crop are not analyzed.
+                  <strong className="text-white">Production Preprocessing:</strong> Convert to RGB; when the long edge exceeds 768 pixels, proportionally downscale to a 768-pixel long edge with bilinear interpolation, then encode as JPEG at quality 60 with 4:2:0 subsampling. <strong className="text-white">Model Input Preparation:</strong> resize the shorter edge to 440 pixels, center-crop to 384 &times; 384, then apply ImageNet normalization. Pixels outside the final crop are not analyzed.
                 </div>
                 <div>
                   <strong className="text-white">Patch Tokenization:</strong> Non-overlapping 16 &times; 16 pixel patches producing exactly <span className="text-[#62E8FF] font-mono">576 spatial patches</span> passed to the Vision Transformer.
                 </div>
                 <div>
                   <strong className="text-white">Thresholding &amp; Scoring:</strong> Raw-logit cutoff <span className="text-[#62E8FF] font-mono">1.359375</span>. The displayed model score is centered on this cutoff, so it is 50% where the verdict changes. It is not a calibrated probability.
+                </div>
+                <div>
+                  <strong className="text-white">Attribution:</strong> Positive input-gradient × input overlay for the analyzed crop. This approximate sensitivity map is not Grad-CAM, causal evidence, or proof of manipulation.
                 </div>
               </div>
             </div>
@@ -180,8 +183,7 @@ export const MethodologyView: React.FC<MethodologyViewProps> = ({ backendStatus 
               Authentic Media Can Be Falsely Flagged
             </div>
             <p className="text-xs text-[#94A3B8] leading-relaxed">
-              Aggressive compression, lens blur, social media re-encoding, and denoising filters can perturb image/audio
-              statistics, resulting in false positives.
+              Compression, blur, re-encoding, denoising, and changes in capture devices can shift inputs away from training data. These changes may affect model results; the project has not measured a reliable error rate for each condition.
             </p>
           </div>
 

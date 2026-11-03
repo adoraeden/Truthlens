@@ -25,11 +25,17 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
   const [scanPhase, setScanPhase] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
   const [result, setResult] = useState<ImageAnalysisResult | null>(null);
+  const [attributionImageError, setAttributionImageError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const explanation = result?.explanation;
+  const explanationHasImages = Boolean(
+    explanation?.overlay_png_base64 && explanation?.crop_png_base64
+  );
 
   const handleFileSelected = (file: File) => {
     setSelectedFile(file);
     setResult(null);
+    setAttributionImageError(false);
     setErrorMessage(null);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
@@ -42,6 +48,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
     setSelectedFile(null);
     setPreviewUrl(null);
     setResult(null);
+    setAttributionImageError(false);
     setErrorMessage(null);
   };
 
@@ -63,12 +70,12 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
 
     const timer1 = setTimeout(() => {
       setScanProgress(45);
-      setScanPhase('Extracting 576 patch tokens (16x16 patch size)...');
+      setScanPhase('Preparing the 384 × 384 model input...');
     }, 400);
 
     const timer2 = setTimeout(() => {
       setScanProgress(80);
-      setScanPhase('Running ViTClassifier feed-forward inference...');
+      setScanPhase('Scoring the image and computing input attribution...');
     }, 900);
 
     try {
@@ -78,6 +85,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
       setScanProgress(100);
       setIsScanning(false);
       setResult(analysis);
+      setAttributionImageError(false);
 
       // Record exact completed audit in session history
       const historyItem: HistoryItem = {
@@ -117,7 +125,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
               </h3>
             </div>
             <p className="text-xs md:text-sm text-[#94A3B8] mt-1.5">
-              Community Forensics ViT-S/16. Resizes the shorter edge to 440 px, then center-crops a 384&times;384 input.
+              Production input: RGB; if the long edge exceeds 768 px, it is proportionally downscaled with bilinear interpolation, then JPEG-encoded at quality 60 (4:2:0). Model input preparation: resize the shorter edge to 440 px, center-crop to 384&times;384, then ImageNet-normalize.
             </p>
           </div>
 
@@ -226,7 +234,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
             currentPhase={scanPhase}
             progressPercent={scanProgress}
             mediaType="image"
-            modelLabel="Community Forensics ViT-S/16 (440 resize + 384 center crop)"
+            modelLabel="ViT-S/16 · RGB → max 768 px long edge (bilinear) → JPEG q60 4:2:0 → 440 px short edge → 384×384 crop"
           />
         )}
 
@@ -273,7 +281,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
                   ViT-Small/16
                 </div>
                 <div className="text-[10px] text-[#64748B] mt-0.5">
-                  Resize to 440 px, center crop to 384&times;384
+                  RGB → max 768 px long edge (bilinear) → JPEG q60 4:2:0; model: 440 px short edge → 384&times;384 center crop + ImageNet normalization
                 </div>
               </div>
 
@@ -292,6 +300,43 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
                 {result.analysis_note}
               </p>
             )}
+            <section className="rounded-2xl bg-[#121424] border border-[#A78BFA]/30 p-5 space-y-3">
+              <div>
+                <h4 className="font-bold text-sm text-[#A78BFA]">Image comparison and attribution</h4>
+                {explanationHasImages && explanation ? (
+                  <>
+                    <p className="text-xs text-[#94A3B8] mt-1">{explanation.method} · {explanation.scope}</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">Approximate input-gradient attribution. It is not Grad-CAM, causal proof, or confirmation of manipulation.</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-[#94A3B8] mt-1">A usable attribution image was not included in this response. The detector verdict and score are still available.</p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <figure className="space-y-2">
+                  {previewUrl ? (
+                    <img className="w-full max-h-80 object-contain rounded-xl border border-white/10 bg-black/20" src={previewUrl} alt="Original uploaded image analyzed by TruthLens" />
+                  ) : (
+                    <p className="text-xs text-[#94A3B8]">Original image preview is unavailable.</p>
+                  )}
+                  <figcaption className="text-xs text-[#94A3B8]">Original uploaded image</figcaption>
+                </figure>
+                {explanationHasImages && explanation && !attributionImageError ? (
+                  <>
+                    <figure className="space-y-2">
+                      <img className="w-full max-h-80 object-contain rounded-xl border border-white/10 bg-black/20" src={`data:image/png;base64,${explanation.crop_png_base64}`} alt="Exact resized center crop analyzed by the image model" onError={() => setAttributionImageError(true)} />
+                      <figcaption className="text-xs text-[#94A3B8]">Exact model input crop</figcaption>
+                    </figure>
+                    <figure className="space-y-2">
+                      <img className="w-full max-h-80 object-contain rounded-xl border border-white/10 bg-black/20" src={`data:image/png;base64,${explanation.overlay_png_base64}`} alt="Positive input-gradient attribution overlay for the model output" onError={() => setAttributionImageError(true)} />
+                      <figcaption className="text-xs text-[#94A3B8]">Attribution overlay (red/yellow indicates stronger positive attribution)</figcaption>
+                    </figure>
+                  </>
+                ) : explanation ? (
+                  <p className="md:col-span-2 text-xs text-[#94A3B8]" role="status">The attribution image could not be displayed. The verdict and score are unaffected.</p>
+                ) : null}
+              </div>
+            </section>
           </div>
         )}
       </div>
