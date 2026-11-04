@@ -115,22 +115,33 @@ flowchart TD
 
 ---
 
-## 4. Application Screenshots
+## 4. ## Screenshots
 
-Screenshots should be captured from the actual running application and stored in `docs/screenshots/`.
+### 1. Dashboard
+![TruthLens Dashboard](docs/screenshots/dashboard.png)
 
-Suggested screenshots:
+### 2. Image Forensics
+![Image Forensics Upload](docs/screenshots/image-forensics-1.png)
 
-| Screenshot | Suggested filename |
-|---|---|
-| Dashboard | `dashboard.png` |
-| Image Lab forensic result | `image-lab.png` |
-| Audio Lab analysis | `audio-lab.png` |
-| Video Lab analysis | `video-lab.png` |
-| Video Mixed Evidence result | `video-mixed-evidence.png` |
+![Image Forensics Detection Results](docs/screenshots/image-forensics-2.png)
 
-Add the actual images to this directory before publishing image links here. Do not use fabricated interface screenshots or sample media containing private information.
+![Image Forensics Heatmap and Diagnostics](docs/screenshots/image-forensics-3.png)
 
+### 3. Audio Lab
+![Audio Upload](docs/screenshots/audio-lab-1.png)
+
+![Audio Analysis Results](docs/screenshots/audio-lab-2.png)
+
+### 4. Video Lab
+![Video Upload](docs/screenshots/video-lab-1.png)
+
+![Video Analysis Results](docs/screenshots/video-lab-2.png)
+
+### 5. Forensic Audit
+![Forensic Audit](docs/screenshots/forensic-audit.png)
+
+### 6. System Methodology
+![System Methodology](docs/screenshots/system-methodology.png)
 ---
 
 ## 5. Measured Evaluation Results & Limitations
