@@ -64,7 +64,8 @@ def pella_can_load(available_gb):
 if str(PELLA_DIR) not in sys.path:
     sys.path.insert(0, str(PELLA_DIR))
 
-import pellav2_infer as pella
+# pellav2_infer is imported lazily in AudioDetector.__init__ so a missing
+# PellaV2 folder does not crash app startup (e.g. on Render).
 
 
 class AudioDetector:
@@ -87,10 +88,24 @@ class AudioDetector:
         if not self.ffmpeg or not self.ffprobe:
             raise RuntimeError("FFmpeg and FFprobe must be installed and available in PATH.")
 
-        self.model = pella.Detector().to(self.device)
+        checkpoint_path = PELLA_DIR / "pellav2_detector.pt"
+        if not checkpoint_path.is_file():
+            raise RuntimeError(
+                f"PellaV2 checkpoint not found at {checkpoint_path}. "
+                "Audio analysis is unavailable."
+            )
+        try:
+            import pellav2_infer
+        except ImportError as exc:
+            raise RuntimeError(
+                f"PellaV2 module could not be imported ({exc}). Audio analysis is unavailable."
+            ) from exc
+        self._pella = pellav2_infer
+
+        self.model = self._pella.Detector().to(self.device)
 
         checkpoint = torch.load(
-            PELLA_DIR / "pellav2_detector.pt",
+            checkpoint_path,
             map_location=self.device,
             weights_only=True,
         )
@@ -184,7 +199,7 @@ class AudioDetector:
                 raise ValueError("Audio conversion failed. Check that the file is valid and supported.")
 
             try:
-                waveform = pella.load_clip(str(wav_path))
+                waveform = self._pella.load_clip(str(wav_path))
             except Exception as exc:
                 raise ValueError("The audio stream could not be decoded for analysis.") from exc
 
