@@ -115,32 +115,39 @@ flowchart TD
 
 ---
 
-## 4. ## Screenshots
+## 4. Screenshots
 
-### 1. Dashboard
+### 4.1 Dashboard
 ![TruthLens Dashboard](docs/screenshots/dashboard.png)
 
-### 2. Image Forensics
+### 4.2 Image Forensics
+**Image Upload**
 ![Image Forensics Upload](docs/screenshots/image-forensics-1.png)
 
+**Detection Results**
 ![Image Forensics Detection Results](docs/screenshots/image-forensics-2.png)
 
-![Image Forensics Heatmap and Diagnostics](docs/screenshots/image-forensics-3.png)
+**Attribution Heatmap and Diagnostics**
+![Image Forensics Heatmap](docs/screenshots/image-forensics-3.png)
 
-### 3. Audio Lab
+### 4.3 Audio Lab
+**Audio Upload**
 ![Audio Upload](docs/screenshots/audio-lab-1.png)
 
-![Audio Analysis Results](docs/screenshots/audio-lab-2.png)
+**Speech Analysis Results**
+![Audio Analysis](docs/screenshots/audio-lab-2.png)
 
-### 4. Video Lab
+### 4.4 Video Lab
+**Video Upload**
 ![Video Upload](docs/screenshots/video-lab-1.png)
 
-![Video Analysis Results](docs/screenshots/video-lab-2.png)
+**Video Analysis Results**
+![Video Analysis](docs/screenshots/video-lab-2.png)
 
-### 5. Forensic Audit
+### 4.5 Forensic Audit
 ![Forensic Audit](docs/screenshots/forensic-audit.png)
 
-### 6. System Methodology
+### 4.6 System Methodology
 ![System Methodology](docs/screenshots/system-methodology.png)
 ---
 
