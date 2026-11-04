@@ -8,17 +8,17 @@ Start the Python backend in a terminal:
 
 ```powershell
 Set-Location 'C:\Users\adora\DeepfakeLab'
-.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8001
 ```
 
 Start the web client in a second terminal:
 
 ```powershell
-Set-Location 'C:\Users\adora\Downloads\truthlens---cyber-candy-ai-media-forensics'
+Set-Location 'C:\Users\adora\DeepfakeLab\frontend'
 npm run dev
 ```
 
-Open `http://localhost:3000`. Vite proxies `/api` requests to the backend at `http://127.0.0.1:8000`. The backend health check is `http://127.0.0.1:8000/api/health`. See the backend [README](../../DeepfakeLab/README.md) for model details, preprocessing, limitations, and API routes.
+Open `http://localhost:3000`. Vite proxies `/api` requests to the backend at `http://127.0.0.1:8001`. The backend health check is `http://127.0.0.1:8001/api/health`. See the backend [README](../README.md) for model details, preprocessing, limitations, and API routes.
 
 The Python environment needs PyTorch, torchvision, timm, transformers, safetensors, Hugging Face Hub, FastAPI, Pillow, NumPy, soundfile, torchaudio, SciPy, and FFmpeg/FFprobe. The current workspace has a backend `.venv`, local PellaV2 weights, and installed frontend `node_modules`. First-time model startup may need network access for Hugging Face model files.
 
@@ -27,7 +27,7 @@ The Python environment needs PyTorch, torchvision, timm, transformers, safetenso
 - Image and audio screens show the detector’s model score and its own verdict. These scores are **not calibrated probabilities**.
 - Audio analysis uses up to four seconds. Longer recordings use their center crop; shorter recordings are padded to the model input length. The result discloses the analyzed duration and source coverage.
 - Video analysis evaluates sampled frame timestamps and, when present, a four-second center audio window separately. It does not produce an overall video probability. Sampled frames do not cover every moment.
-- The interface does not create heatmaps or waveform evidence because the detectors do not return those explanations.
+- Image and sampled video-frame results show a positive input-gradient × input overlay for the exact inference crop. It is an approximate attribution, not proof of manipulation or a causal explanation. Audio does not return an attribution; the audio player is only a signal preview.
 
 ## Models, data, and disclosure
 

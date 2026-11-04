@@ -41,9 +41,7 @@ export const Hero: React.FC<HeroProps> = ({ onQuickStart }) => {
         </h2>
 
         <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed max-w-2xl mb-7">
-          Deep synthetic media forensics for images, speech recordings, and multi-stream video containers. 
-          TruthLens interrogates sub-pixel diffusion signatures, vocal harmonic phase disruptions, and temporal stride 
-          artifacts to expose generative manipulation.
+          A prototype screening tool for images, speech recordings, and video. It reports outputs from separate image and audio detectors for human review; results may be wrong and do not establish authenticity or intent.
         </p>
 
         {/* Quick Launch Buttons into the three labs */}

@@ -93,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   backendStatus.connected ? 'text-[#10B981]' : 'text-[#A78BFA]'
                 }`}
               >
-                {backendStatus.connected ? 'ONLINE (:8000)' : 'OFFLINE'}
+                {backendStatus.connected ? 'ONLINE (:8002)' : 'OFFLINE'}
               </span>
             </div>
             <div className="flex justify-between items-center">

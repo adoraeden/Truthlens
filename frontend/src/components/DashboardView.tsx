@@ -45,7 +45,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center gap-2.5">
             <Info className="w-4 h-4 text-[#A78BFA] shrink-0" />
             <span>
-              <strong className="text-white">Python Detector Service:</strong> The detector API is not connected on port 8000. From the backend folder, run <code className="text-[#62E8FF] bg-black/40 px-1.5 py-0.5 rounded">.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8000</code>.
+              <strong className="text-white">Python Detector Service:</strong> The detector API is not connected on port 8002. From the backend folder, run <code className="text-[#62E8FF] bg-black/40 px-1.5 py-0.5 rounded">.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8002</code>.
             </span>
           </div>
           <button

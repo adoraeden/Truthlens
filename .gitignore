@@ -1,17 +1,52 @@
+# Virtual environments
 .venv/
-models/
-__pycache__/
-*.wav
-*.pt
-*.mp4
-*.mp3
-Community-Forensics/
-UniversalFakeDetect/
-data/kaggle_image/
+venv/
+env/
 
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+
+# Model checkpoints and weights (fetched at runtime / too large for git)
+models/
+*.pt
+*.bin
+*.onnx
+*.safetensors
+UniversalFakeDetect/
+Community-Forensics/
+
+# Datasets and large sample archives
+data/kaggle_image/
+data/genimage_probe/
+data/genimage_validation_sample/
+data/train.zip
+data/*.zip
+*.zip
+
+# Local test media folders and temp frames
 test_images/
 test_audio/
-test_audio.wav
+test_videos/
+test_frames/
+test_audio_big/
+test_audio_deg/
+test_audio_hard/
+test_audio_ctrl/
+test_audio_wav/
+audio_cache/
+new_audio_real/
+new_audio_fake/
+new_real/
+new_fake/
+long_real/
+mistake_review/
+mistake_review.zip
+mistake_review_contact_sheet.jpg
+
+# Media files by extension (test clips, personal recordings, test dumps)
 *.wav
 *.mp3
 *.m4a
@@ -19,25 +54,34 @@ test_audio.wav
 *.flac
 *.ogg
 *.wma
+*.mp4
+*.mov
+*.mkv
+*.avi
 
+# Exception: allow documentation screenshots and frontend public assets
+!docs/screenshots/*
+!frontend/public/**
+!frontend/src/assets/**
 
-# Local test and dataset media
-new_audio_real/
-new_fake/
-new_real/
-test_audio_big/
-test_audio_deg/
-test_audio_hard/
-test_frames/
+# Temporary test logs and outputs
+smoke_out*.txt
+tmp_ctrl.*
 
-# Frontend dependencies and local environment
-frontend/node_modules/
-frontend/dist/
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
 frontend/.env
 frontend/.env.local
 
+# Node / Frontend build artifacts
 frontend/node_modules/
 frontend/dist/
 
-frontend/node_modules/
-frontend/dist/
+# Old evaluation scripts & local test dumps
+eval_audio*.py
+eval_audio*.txt
+eval_audio*.csv
+eval_results*.csv
+reports/genimage_error_review/*.png

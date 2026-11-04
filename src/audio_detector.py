@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import ctypes
+import os
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +15,51 @@ PELLA_DIR = PROJECT_ROOT / "models" / "pellav2"
 SUPPORTED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
 ANALYSIS_WINDOW_SECONDS = 4.0
 MIN_AUDIO_SECONDS = 0.25
+PELLA_MIN_AVAILABLE_GB = float(os.getenv("TRUTHLENS_PELLA_MIN_RAM_GB", "3.5"))
+
+
+def available_memory_gb():
+    """Return available physical RAM, or zero when it cannot be determined."""
+    try:
+        import psutil
+        return psutil.virtual_memory().available / 1e9
+    except ImportError:
+        pass
+
+    if os.name == "nt":
+        class MemoryStatus(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MemoryStatus()
+        status.dwLength = ctypes.sizeof(status)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+            return status.ullAvailPhys / 1e9
+        return 0.0
+
+    try:
+        available_pages = os.sysconf("SC_AVPHYS_PAGES")
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        return available_pages * page_size / 1e9
+    except (AttributeError, OSError, ValueError):
+        return 0.0
+
+
+def pella_can_load(available_gb):
+    try:
+        available_gb = float(available_gb)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(available_gb) and available_gb >= PELLA_MIN_AVAILABLE_GB
 
 if str(PELLA_DIR) not in sys.path:
     sys.path.insert(0, str(PELLA_DIR))
@@ -24,6 +71,16 @@ class AudioDetector:
     def __init__(self):
         torch.set_num_threads(8)
         self.device = torch.device("cpu")
+
+        available_gb = available_memory_gb()
+        if not pella_can_load(available_gb):
+            raise RuntimeError(
+                f"PellaV2 requires at least {PELLA_MIN_AVAILABLE_GB:.1f} GB of free RAM to load, "
+                f"but only {available_gb:.2f} GB is currently available. "
+                f"Close other applications to free memory, then restart the backend. "
+                f"You can lower this threshold by setting the environment variable "
+                f"TRUTHLENS_PELLA_MIN_RAM_GB (current default: {PELLA_MIN_AVAILABLE_GB:.1f})."
+            )
 
         self.ffmpeg = shutil.which("ffmpeg")
         self.ffprobe = shutil.which("ffprobe")

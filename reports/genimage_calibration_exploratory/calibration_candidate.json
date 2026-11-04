@@ -1,0 +1,286 @@
+{
+  "exploratory": true,
+  "production_eligible": false,
+  "dataset_version": "genimage-validation-sample-400-v1",
+  "decision_threshold": 0.5,
+  "split_policy": "generator-disjoint",
+  "source_lineage_verified": false,
+  "original_image_lineage_verified": false,
+  "counts": {
+    "calibration": {
+      "count": 200,
+      "genuine": 100,
+      "ai_generated": 100,
+      "generators": [
+        "ADM",
+        "BigGAN",
+        "Midjourney",
+        "glide"
+      ]
+    },
+    "development": {
+      "count": 100,
+      "genuine": 50,
+      "ai_generated": 50,
+      "generators": [
+        "stable_diffusion_v_1_4",
+        "stable_diffusion_v_1_5"
+      ]
+    },
+    "test": {
+      "count": 100,
+      "genuine": 50,
+      "ai_generated": 50,
+      "generators": [
+        "VQDM",
+        "wukong"
+      ]
+    }
+  },
+  "method_selection": "Lowest development NLL; Brier score tie-break",
+  "selected_method": "temperature",
+  "method": "temperature",
+  "parameters": {
+    "temperature": 2.4702988886210853
+  },
+  "development_metrics": {
+    "platt": {
+      "n": 100,
+      "brier_score": 0.030579110924780762,
+      "negative_log_likelihood": 0.1132164175077006,
+      "expected_calibration_error_10_bins": 0.07028320430898784,
+      "roc_auc": 1.0,
+      "pr_auc_average_precision": 1.0,
+      "by_class": {
+        "genuine": {
+          "n": 50,
+          "brier": 0.061148680372579714,
+          "negative_log_likelihood": 0.22527694454768235,
+          "mean_predicted_ai_probability": 0.14171747973833373
+        },
+        "ai_generated": {
+          "n": 50,
+          "brier": 9.541476981812938e-06,
+          "negative_log_likelihood": 0.0011558904677188928,
+          "mean_predicted_ai_probability": 0.9988489288796418
+        }
+      },
+      "reliability_bins": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.2,
+          "count": 39,
+          "mean_predicted_ai": 0.0488390161942168,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.4,
+          "count": 6,
+          "mean_predicted_ai": 0.3364493836688734,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.6,
+          "count": 3,
+          "mean_predicted_ai": 0.48618450258887735,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.8,
+          "count": 1,
+          "mean_predicted_ai": 0.7357539306354218,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 1.0,
+          "count": 51,
+          "mean_predicted_ai": 0.9982469619393928,
+          "observed_ai_fraction": 0.9803921568627451
+        }
+      ]
+    },
+    "temperature": {
+      "n": 100,
+      "brier_score": 0.01364960833576012,
+      "negative_log_likelihood": 0.06603307665301111,
+      "expected_calibration_error_10_bins": 0.0380259732630801,
+      "roc_auc": 1.0,
+      "pr_auc_average_precision": 1.0,
+      "by_class": {
+        "genuine": {
+          "n": 50,
+          "brier": 0.026579537075101068,
+          "negative_log_likelihood": 0.11659999328929732,
+          "mean_predicted_ai_probability": 0.09113396115010908
+        },
+        "ai_generated": {
+          "n": 50,
+          "brier": 0.0007196795964191703,
+          "negative_log_likelihood": 0.015466160016724875,
+          "mean_predicted_ai_probability": 0.9849179853760509
+        }
+      },
+      "reliability_bins": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.2,
+          "count": 44,
+          "mean_predicted_ai": 0.052966151458215885,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.4,
+          "count": 4,
+          "mean_predicted_ai": 0.2456024117488565,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.6,
+          "count": 1,
+          "mean_predicted_ai": 0.4318259853978997,
+          "observed_ai_fraction": 0.0
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 1.0,
+          "count": 51,
+          "mean_predicted_ai": 0.9815264907794742,
+          "observed_ai_fraction": 0.9803921568627451
+        }
+      ]
+    }
+  },
+  "untouched_generator_test_metrics": {
+    "platt": {
+      "n": 100,
+      "brier_score": 0.04559999120659314,
+      "negative_log_likelihood": 0.16083278376488264,
+      "expected_calibration_error_10_bins": 0.03536704853452808,
+      "roc_auc": 0.9844,
+      "pr_auc_average_precision": 0.9880496847125273,
+      "by_class": {
+        "genuine": {
+          "n": 50,
+          "brier": 0.024908099411040267,
+          "negative_log_likelihood": 0.11126998784185367,
+          "mean_predicted_ai_probability": 0.09331071755778701
+        },
+        "ai_generated": {
+          "n": 50,
+          "brier": 0.066291883002146,
+          "negative_log_likelihood": 0.2103955796879116,
+          "mean_predicted_ai_probability": 0.8804324740480911
+        }
+      },
+      "reliability_bins": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.2,
+          "count": 44,
+          "mean_predicted_ai": 0.047998459474394524,
+          "observed_ai_fraction": 0.022727272727272728
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.4,
+          "count": 8,
+          "mean_predicted_ai": 0.3079050302360137,
+          "observed_ai_fraction": 0.375
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.6,
+          "count": 3,
+          "mean_predicted_ai": 0.49353499572499326,
+          "observed_ai_fraction": 0.6666666666666666
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.8,
+          "count": 5,
+          "mean_predicted_ai": 0.6651567941493756,
+          "observed_ai_fraction": 0.8
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 1.0,
+          "count": 40,
+          "mean_predicted_ai": 0.9826399540902646,
+          "observed_ai_fraction": 1.0
+        }
+      ]
+    },
+    "temperature": {
+      "n": 100,
+      "brier_score": 0.06804399290407152,
+      "negative_log_likelihood": 0.22233873826558892,
+      "expected_calibration_error_10_bins": 0.07597488515721185,
+      "roc_auc": 0.9844,
+      "pr_auc_average_precision": 0.9880496847125273,
+      "by_class": {
+        "genuine": {
+          "n": 50,
+          "brier": 0.007981765288262383,
+          "negative_log_likelihood": 0.06443288298540832,
+          "mean_predicted_ai_probability": 0.059754123128907544
+        },
+        "ai_generated": {
+          "n": 50,
+          "brier": 0.12810622051988063,
+          "negative_log_likelihood": 0.38024459354576956,
+          "mean_predicted_ai_probability": 0.7882961065566687
+        }
+      },
+      "reliability_bins": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.2,
+          "count": 51,
+          "mean_predicted_ai": 0.05387300538802853,
+          "observed_ai_fraction": 0.0784313725490196
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.4,
+          "count": 8,
+          "mean_predicted_ai": 0.3053324176516595,
+          "observed_ai_fraction": 0.625
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.6,
+          "count": 2,
+          "mean_predicted_ai": 0.4639116193910257,
+          "observed_ai_fraction": 1.0
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.8,
+          "count": 6,
+          "mean_predicted_ai": 0.7230067175477018,
+          "observed_ai_fraction": 1.0
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 1.0,
+          "count": 33,
+          "mean_predicted_ai": 0.9680747067941764,
+          "observed_ai_fraction": 1.0
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Exploratory sample only; not production validated.",
+    "Source/original image lineage identifiers were not provided.",
+    "Test covers VQDM and Wukong only, not all possible generators.",
+    "Only 100 images are in the held-out test split.",
+    "Do not interpret these estimates as universal authenticity probabilities."
+  ]
+}

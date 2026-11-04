@@ -1,58 +1,186 @@
-# TruthLens media screening backend
+﻿# TruthLens: Multimodal Deepfake & Synthetic Media Forensic Engine
 
-TruthLens is a hackathon prototype that screens uploaded images, audio recordings, and videos for indicators associated with AI-generated media. It is an assistive review tool: model scores are uncalibrated, results can be wrong, and a result is not proof of authenticity or disinformation.
+[![Hackathon](https://img.shields.io/badge/NEURAL%20STORM%202026-FT--02%20Synthetic%20Media-blue.svg)](https://github.com/adoraeden/Truthlens)
+[![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite%20%7C%20Tailwind%204-61DAFB.svg)](frontend/)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI%20%7C%20PyTorch%20%7C%20Uvicorn-009688.svg)](src/)
+[![License](https://img.shields.io/badge/License-MIT%20%2F%20Exploratory-green.svg)](LICENSE)
 
-## Architecture and models
+TruthLens is a multimodal forensic screening engine developed for **NEURAL STORM 2026** under **Problem Statement FT-02: Deepfake & Synthetic Media Detection**. It provides newsrooms, digital forensic analysts, and platforms with an assistive review tool to inspect uploaded **images**, **audio clips**, and **video recordings** for visual, spectral, and semantic indicators of AI generation.
 
-- **Images:** Community Forensics ViT-S/16, using the `Thermostatic/community-forensics-frontier-detector-2026-08` checkpoint. Images are converted to RGB, resized so the shorter edge is 440 pixels, center-cropped to 384 × 384, and ImageNet-normalized. Pixels outside the center crop are not analyzed. A fixed raw-logit cutoff of 1.359375 determines the verdict; the displayed model score is transformed so it crosses 50% at that same cutoff. It is not a calibrated probability.
-- **Audio:** PellaV2 with a Wav2Vec2-BERT 2.0 backbone and a locally stored `models/pellav2/pellav2_detector.pt` checkpoint. FFmpeg converts audio to 16 kHz mono PCM. Clips up to four seconds are analyzed in full (short clips are zero-padded); longer clips use a four-second center crop. The model is intended for synthetic-speech screening, and its sigmoid score is not a calibrated probability.
-- **Video:** FFprobe inspects the container. Up to eight frames are extracted at the midpoints of uniform time intervals and passed to the image detector. If audio exists, a center window of at most four seconds is sent to the audio detector. Image and audio findings remain separate. The mean sampled-frame score is a descriptive statistic, not a whole-video probability. Sampled timestamps do not represent every moment.
+---
 
-The project uses pretrained and externally published models; the models were **not trained from scratch for TruthLens**. The image checkpoint is fetched from Hugging Face on backend startup if it is not cached. PellaV2 weights are included locally; its Wav2Vec2-BERT backbone may also need its Hugging Face files cached. No model or dataset download is performed by the reliability changes in this project.
+## 1. Problem Statement & Motivation
 
-The exploratory image evaluator also has an optional 768-pixel long-edge resize and JPEG-quality-60 conversion path. The production detector does not use that transform. Existing small tests do not justify changing production preprocessing, and their results should not be treated as validation of the current production path.
+> **Track & Statement**: **FT-02 Deepfake & Synthetic Media Detection**
+> *"Build a multimodal detection engine to identify AI-generated images, videos, and audio and flag disinformation at scale."*
 
-## Run locally on Windows
+### The Challenge
+Generative diffusion models, voice cloners, and neural video synthesizers can now produce hyper-realistic faces, voices, and events. Automated binary detectors often suffer from catastrophic false-positive spikes when encountering unseen generator architectures, phone microphone compressions, or HEVC video codecs.
 
-The backend environment needs Python, PyTorch and the model/runtime packages used by the detector code, plus FFmpeg and FFprobe on `PATH`. This workspace already has a `.venv` and the PellaV2 checkpoint.
+### TruthLens Approach
+TruthLens avoids "black-box binary verdict" overconfidence:
+- **Conservative Multi-Evidence Logic**: Video verdicts aggregate per-frame detections into three distinct states (`LIKELY REAL`, `MIXED EVIDENCE`, and `AI-GENERATED`). An isolated flagged frame does not erroneously condemn an entire recording.
+- **Explainable Attribution**: Provides positive input-gradient attribution maps, high-frequency noise residuals, Error Level Analysis (ELA), and RGB distribution diagnostics.
+- **HEVC / Device Compatibility**: Transparently detects browser-incompatible device codecs (such as H.265/HEVC recorded on smartphones) and generates fast, streamable H.264 MP4 previews while ensuring the uncompressed original media is always routed to the underlying neural detectors.
+- **Honest Statistical Calibration**: Clearly separates raw model logits, uncalibrated sigmoid confidence scores, and probability estimates.
 
-From `C:\Users\adora\DeepfakeLab`, start the API:
+---
 
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8000
+## 2. Architecture & Multimodal Pipeline
+
+```mermaid
+flowchart TD
+    UserUpload[Media Upload: Image / Audio / Video] --> Gateway[FastAPI Backend :8002]
+
+    subgraph "Image Modality"
+        Gateway -->|Image| ImgPre[Preprocess: 768px limit + JPEG q60 + 384x384 Center Crop]
+        ImgPre --> ViT[Community-Forensics ViT-S/16]
+        ViT --> GradCam[Input-Gradient x Input Attribution]
+        ViT --> ImgLogit[Raw Logit & Sigmoid Score]
+    end
+
+    subgraph "Audio Modality"
+        Gateway -->|Audio| AudPre[FFmpeg 16kHz Mono PCM + 4s Center Window]
+        AudPre --> Pella[PellaV2 / Wav2Vec2-BERT 2.0]
+        Pella --> AudScore[Speech Synthesis Score]
+    end
+
+    subgraph "Video Modality"
+        Gateway -->|Video| VidCheck[Container & Codec Inspection]
+        VidCheck -->|Browser Playback| HEVC[FFmpeg FastStart H.264 Transcoder]
+        VidCheck -->|Forensic Extraction| FrameExtract[Uniform Interval Midpoint Sampling: Max 8 Frames]
+        VidCheck -->|Audio Track| VidAud[Extract Center Audio Window]
+        FrameExtract --> ViT
+        VidAud --> Pella
+        ViT --> Aggregator[Multi-Frame Verdict Aggregator]
+    end
+
+    Aggregator --> Frontend[React 19 Interactive Workspace :3000]
+    ImgLogit --> Frontend
+    AudScore --> Frontend
 ```
 
-In another terminal, start the React/Vite client:
+### Modality Specifications
+1. **Image Lab**:
+   - **Backbone**: Fine-tuned Vision Transformer (ViT-Small/16) from `Thermostatic/community-forensics-frontier-detector-2026-08`.
+   - **Input Processing**: Rescaled to max 768px long edge, JPEG quality 60 compressed (anti-artifact normalization), resized to 440px short edge, and center-cropped to 384×384 (576 patches of 16×16).
+   - **Decision Boundary**: Configurable raw-logit threshold (default: `0.0`, with backward-compatible override `TRUTHLENS_IMAGE_LOGIT_THRESHOLD`).
+   - **Diagnostics**: Model attribution heatmap, Error Level Analysis (ELA), Noise Residual analysis, and RGB compression histograms.
 
+2. **Audio Lab**:
+   - **Backbone**: PellaV2 with `facebook/w2v-bert-2.0` foundation weights.
+   - **Input Processing**: FFmpeg resamples audio to 16 kHz single-channel mono PCM. Clips under 4s are zero-padded; longer clips extract a central 4-second temporal window.
+   - **Memory Resilience**: Integrated RAM preflight guard (configured down to 3.5 GB min RAM) ensures stability on shared or lightweight host nodes.
+
+3. **Video Lab**:
+   - **Visual Sampling**: Uniform interval midpoint extraction sampling up to 8 frames per clip.
+   - **Verdict Aggregation**:
+     - `0 flagged frames`: **LIKELY REAL**
+     - `1 to N-1 flagged frames`: **MIXED EVIDENCE** (Flags temporal anomalies or isolated artifacts requiring expert human review)
+     - `All sampled frames flagged`: **AI-GENERATED**
+   - **Playback Pipeline**: Dual-track handling: server-side background H.264 preview generation for browser compatibility (`POST /api/convert/video-preview`) while guaranteeing forensic inference receives the untranscoded master copy.
+
+---
+
+## 3. Technology Stack
+
+- **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS v4, Lucide Icons, Motion.
+- **Backend**: Python 3.12, FastAPI, Uvicorn, Starlette, Pydantic v2.
+- **Machine Learning & Vision**: PyTorch, Torchvision, Torchaudio, Transformers, TIMM, OpenCV (cv2), Pillow, NumPy, SciPy.
+- **Audio Processing**: SoundFile, Librosa, Pyloudnorm.
+- **Media Engine**: FFmpeg / FFprobe (audio transcoding, video frame extraction, H.264 browser conversions).
+
+---
+
+## 4. Measured Evaluation Results & Limitations
+
+### Exploratory GenImage Validation Benchmark
+Evaluated across a stratified 400-sample test slice (200 AI-generated across 8 generator architectures, 200 natural images) from the Kaggle GenImage mirror (`vtphatt2/genimage-validation`):
+
+| Operating Point | Threshold (Logit) | Overall Accuracy | Precision | AI Recall | False Positive Rate |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Balanced (Default)** | **0.0** | **90.5%** | **97.65%** | **83.0%** | **2.0%** |
+| High-Precision Mode | 2.0 | 86.5% | 98.67% | 74.0% | 1.0% |
+
+#### Generator Robustness Breakdown (at threshold = 0.0)
+- **Stable Diffusion v1.5**: 100.0% Detection
+- **Wukong**: 100.0% Detection
+- **GLIDE & SD v1.4**: 98.0% Detection
+- **Midjourney**: 94.0% Detection
+- **BigGAN**: 82.0% Detection
+- **VQDM**: 80.0% Detection
+- **ADM**: 72.0% Detection (challenging diffusion boundary)
+
+### Critical Forensic Limitations
+- **Not Calibrated Probabilities**: Displayed confidence values are threshold-relative sigmoid mappings, not mathematical Bayesian posterior probabilities.
+- **Crop Invariant**: Image analysis inspects a central 384×384 window; manipulation isolated entirely to outer borders will not register in the ViT feature maps.
+- **Acoustic Replay Limitation**: PellaV2 reliably spots synthetic vocoder anomalies in direct digital streams, but synthetic speech played through a physical speaker and re-recorded via a smartphone microphone may exhibit acoustic room impulse responses that cause false negatives.
+- **Temporal Blindspots**: Uniform 8-frame video sampling does not evaluate every micro-frame; microsecond face swaps between sample windows require targeted manual inspection.
+
+---
+
+## 5. Local Setup & Execution Guide
+
+### Prerequisites
+- **OS**: Windows, macOS, or Linux
+- **Python**: 3.11 or 3.12
+- **Node.js**: v18+ and `npm`
+- **FFmpeg & FFprobe**: Installed and available in system `PATH`
+
+### 1. Backend Setup
 ```powershell
-Set-Location 'C:\Users\adora\Downloads\truthlens---cyber-candy-ai-media-forensics'
+# Navigate to the repository root
+Set-Location 'C:\Users\adora\DeepfakeLab'
+
+# Create and activate virtual environment (if not already created)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start FastAPI backend (runs on http://127.0.0.1:8002)
+$env:TRUTHLENS_IMAGE_LOGIT_THRESHOLD = "0.0"
+$env:TRUTHLENS_PELLA_MIN_RAM_GB = "3.5"
+python -m uvicorn src.api_server:app --host 127.0.0.1 --port 8002
+```
+
+### 2. Frontend Setup
+```powershell
+# In a new terminal window:
+Set-Location 'C:\Users\adora\DeepfakeLab\frontend'
+
+# Install Node dependencies
+npm install
+
+# Launch Vite development server (runs on http://localhost:3000)
 npm run dev
 ```
 
-Vite serves the UI on port 3000 and proxies `/api` to `http://127.0.0.1:8000`. The API health endpoint is `http://127.0.0.1:8000/api/health`. The first backend startup can take time while model weights load; image checkpoint access requires a prior cache or network access.
+Open your browser at `http://localhost:3000`. The Vite development server automatically proxies `/api` requests to the FastAPI backend running at `http://127.0.0.1:8002`.
 
-## API
+---
 
-All endpoints accept one multipart upload field named `file`, enforce a 100 MiB upload limit, and preserve the existing response envelope (`success`, `modality`, `filename`, `result`).
+## 6. Pretrained Models, Licenses & Transparency
 
-- `GET /api/health`
-- `POST /api/detect/image` — `.jpg`, `.jpeg`, `.png`, `.webp`, `.bmp`
-- `POST /api/detect/audio` — `.wav`, `.mp3`, `.m4a`, `.flac`, `.ogg`, `.aac`
-- `POST /api/detect/video` — `.mp4`, `.mov`, `.mkv`, `.avi`
+In compliance with hackathon rules, TruthLens is transparent about its components:
+1. **Image Detector Checkpoint**: `Thermostatic/community-forensics-frontier-detector-2026-08` (ViT-Small/16 architecture trained on community synthetic datasets).
+2. **Audio Detector Backbone**: `Sadanie/PellaV2` with `facebook/w2v-bert-2.0` feature representation.
+3. **Exploratory Evaluation Dataset**: GenImage validation benchmark subset (`vtphatt2/genimage-validation`, CC BY-NC-SA 4.0).
+4. **AI Tooling Disclosure**: Claude Sonnet and Gemini AI were utilized for code review, TypeScript refactoring, testing suite automation, and documentation synthesis. Core detector inference architectures and model checkpoints were authored by external research teams as cited above.
 
-Invalid or undecodable media receives a client error with a user-facing message. Other inference failures are logged by the server and return a generic message without exposing internal paths or stack traces. Inference runs in FastAPI's thread pool; a lock serializes access to the shared model instances.
+---
 
-## Evaluation data and limitations
+## 7. Automated Testing Suite
 
-`data/train.zip` and the extracted `data/kaggle_image` folders contain CIFAKE-style image data. The source data pairs CIFAR-10 real images with Stable Diffusion 1.4 fakes and is not a reliable measure of performance on modern generators or high-resolution media. `eval_results*.csv`, `eval_audio_results.csv`, and `RESEARCH_LOG.md` contain informal exploratory checks, not independent benchmark results. The audio notes document recording-channel confounds and missed replayed synthetic speech. The video notes cover only a couple of example clips. Do not present these as general accuracy claims.
+To verify the complete system integrity:
 
-There is no validated image heatmap, audio explanation, lip-sync comparison, or fused whole-video verdict. Video analysis may miss manipulations between sampled frames; audio analysis may miss content outside the selected window. Scores from all modalities are model outputs, not calibrated probabilities.
+```powershell
+# Backend unit & integration tests
+pytest tests/test_api_endpoints.py tests/test_detectors.py
 
-The API runs inference in a thread pool so media processing does not run on the async event loop, but a process-level lock serializes inference through the shared model instances. This prototype does not include a distributed worker queue and has not been load-tested for high-volume processing.
-
-## Data, checkpoints, and AI assistance disclosure
-
-- Image model: Community Forensics architecture and the published Thermostatic checkpoint; see `Community-Forensics/LICENSE` and the upstream model card for current terms and provenance.
-- Audio model: Sadanie/PellaV2 checkpoint and `facebook/w2v-bert-2.0` backbone; see `models/pellav2/README.md` and upstream model documentation for terms and provenance.
-- Image data: CIFAKE (real CIFAR-10 images and Stable Diffusion 1.4 synthetic images); see `data/DATASET_NOTES.txt` and `dataset-metadata.json`.
-- Development tools: Claude assisted pre-hackathon research, scripts, and debugging as recorded in `RESEARCH_LOG.md`. Codex assisted with the TruthLens audit and reliability implementation. No claim is made that the detectors were trained from scratch.
+# Frontend TypeScript & suite validation
+Set-Location 'frontend'
+npm run lint
+npm run build
+```

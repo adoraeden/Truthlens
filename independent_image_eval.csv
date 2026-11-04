@@ -1,0 +1,81 @@
+file,truth,prediction,logit,verdict,correct
+download (2).jpg,0,0,-4.01579,Likely real,True
+IMG_20260527_134355.jpg,0,0,-6.77284,Likely real,True
+IMG_20260604_191222.jpg,0,0,-6.99122,Likely real,True
+IMG_20260613_183236.jpg,0,0,-5.178,Likely real,True
+IMG_20260817_102208.jpg,0,0,-1.38483,Likely real,True
+IMG_20260818_110954.jpg,0,0,-4.98309,Likely real,True
+IMG_20260819_122255.jpg,0,0,-1.60933,Likely real,True
+IMG_20260821_191055.jpg,0,0,-1.50909,Likely real,True
+IMG_20260821_191057.jpg,0,1,1.47851,AI-generated,False
+IMG_20260822_071056.jpg,0,0,-5.2602,Likely real,True
+IMG_20260823_114623.jpg,0,0,-1.44335,Likely real,True
+IMG_20260827_123510.jpg,0,0,-2.64839,Likely real,True
+IMG_20260827_125501.jpg,0,0,-3.39933,Likely real,True
+IMG_20260827_135715.jpg,0,0,-6.16685,Likely real,True
+IMG_20260827_153857.jpg,0,0,-10.85218,Likely real,True
+IMG_20260827_153859.jpg,0,0,-7.04625,Likely real,True
+IMG_20260827_153907.jpg,0,0,-8.83721,Likely real,True
+IMG_20260828_183746.jpg,0,0,1.05017,Likely real,True
+IMG_20260828_185220.jpg,0,0,-5.81088,Likely real,True
+IMG_20260828_190038.jpg,0,0,-0.85709,Likely real,True
+IMG_20260828_190553.jpg,0,0,-7.2618,Likely real,True
+IMG_20260830_210220.jpg,0,0,-5.21649,Likely real,True
+IMG_20260831_113724.jpg,0,1,2.2695,AI-generated,False
+IMG_20260903_145952.jpg,0,1,12.5689,AI-generated,False
+IMG_20260904_112617.jpg,0,0,-0.91846,Likely real,True
+IMG_20260904_183130.jpg,0,0,-6.5095,Likely real,True
+IMG_20260904_183646.jpg,0,0,-3.11714,Likely real,True
+IMG_20260905_082708.jpg,0,0,-4.07756,Likely real,True
+IMG_20260906_085254.jpg,0,1,2.97617,AI-generated,False
+IMG_20260908_182626.jpg,0,0,0.91474,Likely real,True
+IMG_20260909_202259.jpg,0,0,-6.04021,Likely real,True
+IMG_20260912_102210.jpg,0,1,1.58582,AI-generated,False
+IMG_20260912_143054.jpg,0,0,-0.4091,Likely real,True
+IMG_20260912_143211.jpg,0,0,-0.52486,Likely real,True
+IMG_20260912_143227.jpg,0,0,-1.03235,Likely real,True
+IMG_20260928_163511.jpg,0,0,-6.02604,Likely real,True
+IMG_20261009_132627.jpg,0,0,-5.74733,Likely real,True
+IMG_20261013_211340.jpg,0,0,-5.09293,Likely real,True
+IMG_20261014_122259.jpg,0,1,2.71629,AI-generated,False
+WA_1793379226117.jpeg,0,0,-3.98855,Likely real,True
+fake1.jpg,1,1,12.05654,AI-generated,True
+IMG_0785f4cc-7ee3-4496-bb73-9269172f62cd.jpg,1,1,12.39077,AI-generated,True
+IMG_0ae9a827-b0d5-4278-b30a-fba8db9ed10d.jpg,1,1,7.74562,AI-generated,True
+IMG_0f615566-32c1-4b57-9c6e-70f4e9484896.jpg,1,1,8.19976,AI-generated,True
+IMG_105d9051-e231-44a4-9071-1b49045706bb.jpg,1,0,1.03657,Likely real,False
+IMG_11a579b4-b4c0-4472-94de-547b1049a598.jpg,1,1,12.44202,AI-generated,True
+IMG_27065e6b-62c6-491d-bd10-8352bf44c258.jpg,1,1,8.50447,AI-generated,True
+IMG_34928f38-0cde-47ee-8a2a-70076e590017.jpg,1,1,2.36016,AI-generated,True
+IMG_351bc4fb-d2c2-4b6c-8d4f-5cd7fb6ae934.jpg,1,1,7.44582,AI-generated,True
+IMG_37a00261-ecd8-4102-91d5-ac0562e2c238.jpg,1,1,9.72843,AI-generated,True
+IMG_40f6ec71-f4c6-47b9-83d6-be99323df172.jpg,1,1,9.4803,AI-generated,True
+IMG_41923e21-ffb3-4bef-9b77-0ad9902c9e72.jpg,1,1,12.54179,AI-generated,True
+IMG_45acb60b-78ef-41be-8173-112fa7853997.jpg,1,1,4.67248,AI-generated,True
+IMG_480849e7-93bd-4d78-bf3a-600943e10dab.jpg,1,1,2.48387,AI-generated,True
+IMG_5d820069-5a51-4841-9ee2-18408f6da20d.jpg,1,1,1.72931,AI-generated,True
+IMG_5e2c1b5d-51c8-453f-8622-1534ae1cae7c.jpg,1,0,-0.75574,Likely real,False
+IMG_603494e1-2c0b-4d57-92c6-b7a278868306.jpg,1,0,-3.34676,Likely real,False
+IMG_63894a4b-f54f-4984-aa29-242cd14fd9a3.jpg,1,1,12.30697,AI-generated,True
+IMG_69c6ac66-67fa-46fc-81d4-c53e28c232d1.jpg,1,1,4.82153,AI-generated,True
+IMG_7c8c7b19-ded2-4b87-9ca1-92279866d95d.jpg,1,1,10.62576,AI-generated,True
+IMG_7d012fbd-f1c3-4979-9b8b-9383799a1ce3.jpg,1,1,5.21514,AI-generated,True
+IMG_89963dc2-f35f-4a57-b6af-e237a7cef3c4.jpg,1,1,9.55942,AI-generated,True
+IMG_936b177f-92f1-477d-935a-5bd80c09faa2.jpg,1,1,7.71708,AI-generated,True
+IMG_a150f76d-7995-4389-95a7-23a467303c42.jpg,1,1,7.00816,AI-generated,True
+IMG_a5d94739-86ca-4965-bbe8-143ad5e1b686.jpg,1,1,11.95734,AI-generated,True
+IMG_ae410091-d30f-4de7-ae75-dbe6a9718657.jpg,1,1,8.88217,AI-generated,True
+IMG_b7028a7c-ddd2-43c6-a87c-623615259d51.jpg,1,1,13.16163,AI-generated,True
+IMG_bc76d504-2a79-46cc-be42-b9b3861e7442.jpg,1,1,3.88189,AI-generated,True
+IMG_c185bd1c-b853-45bb-9f56-aceb32bc7b2a.jpg,1,1,10.64502,AI-generated,True
+IMG_d09ba9fd-31b1-4f31-899b-446a17a84dd7.jpg,1,1,4.34843,AI-generated,True
+IMG_d1efd152-2cbe-4c34-ac3f-55cb77458fd6.jpg,1,1,11.23295,AI-generated,True
+IMG_d9db2320-e4f7-4709-8c31-f1fe08ee60cc.jpg,1,1,2.27505,AI-generated,True
+IMG_dc928718-1128-4cfa-84b7-67ac144b3af3.jpg,1,1,13.79016,AI-generated,True
+IMG_decf65c4-fe7e-4d13-84a6-fb6039653091.jpg,1,1,9.99233,AI-generated,True
+IMG_e2b06311-7b68-45f5-9b56-e8208fcf6de9.jpg,1,1,11.83863,AI-generated,True
+IMG_e3f132cc-1c37-4f3f-ac8b-274d9c0cde13.jpg,1,1,8.33471,AI-generated,True
+IMG_e8e13fb6-7091-48a6-81c3-ae5ed01529ab.jpg,1,1,8.19876,AI-generated,True
+IMG_f2172371-885e-4995-b1c7-24ee2b03ecf2.jpg,1,1,9.78682,AI-generated,True
+IMG_f375c4bb-eadd-4ad6-865e-e195838b96b1.jpg,1,1,9.38424,AI-generated,True
+IMG_fd842d50-c9b9-4777-be62-439ac3d053b7.jpg,1,1,13.99768,AI-generated,True

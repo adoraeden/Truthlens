@@ -44,7 +44,7 @@ export const MethodologyView: React.FC<MethodologyViewProps> = ({ backendStatus 
                 : 'bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30'
             }`}
           >
-            {backendStatus.connected ? 'BACKEND LINKED (:8000)' : 'STANDBY MODE'}
+            {backendStatus.connected ? 'BACKEND LINKED (:8002)' : 'STANDBY MODE'}
           </span>
         </div>
 
@@ -71,7 +71,7 @@ export const MethodologyView: React.FC<MethodologyViewProps> = ({ backendStatus 
                   <strong className="text-white">Patch Tokenization:</strong> Non-overlapping 16 &times; 16 pixel patches producing exactly <span className="text-[#62E8FF] font-mono">576 spatial patches</span> passed to the Vision Transformer.
                 </div>
                 <div>
-                  <strong className="text-white">Thresholding &amp; Scoring:</strong> Raw-logit cutoff <span className="text-[#62E8FF] font-mono">1.359375</span>. The displayed model score is centered on this cutoff, so it is 50% where the verdict changes. It is not a calibrated probability.
+                  <strong className="text-white">Thresholding &amp; Scoring:</strong> The backend reports the raw-logit cutoff with each image result. The displayed score is sigmoid(logit − cutoff), so 50% is the verdict boundary. It is an uncalibrated model score, not a probability.
                 </div>
                 <div>
                   <strong className="text-white">Attribution:</strong> Positive input-gradient × input overlay for the analyzed crop. This approximate sensitivity map is not Grad-CAM, causal evidence, or proof of manipulation.
@@ -226,7 +226,7 @@ export const MethodologyView: React.FC<MethodologyViewProps> = ({ backendStatus 
         <div className="bg-[#0B0C16] border border-white/10 rounded-xl p-4 font-mono text-xs text-[#94A3B8] space-y-2">
           <div className="text-[#62E8FF] font-bold"># Start the Python Detector REST API Server:</div>
           <div className="text-white bg-[#191B30] p-2.5 rounded-lg select-all">
-            python -m uvicorn src.api_server:app --host 127.0.0.1 --port 8000
+            python -m uvicorn src.api_server:app --host 127.0.0.1 --port 8002
           </div>
           <div className="text-[11px] text-[#64748B] pt-1">
             The React frontend automatically communicates with endpoints: 

@@ -9,16 +9,42 @@ import numpy as np
 from PIL import Image, UnidentifiedImageError
 
 
+SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi"}
+
+
+def summarize_frame_scores(frame_results):
+    """Return descriptive per-frame aggregates, never a whole-video verdict."""
+    if not frame_results:
+        raise ValueError("At least one analyzed frame is required for a summary.")
+
+    scores = [float(item["score"]) for item in frame_results]
+    flagged = sum(item["verdict"] == "AI-generated" for item in frame_results)
+    return {
+        "ai_flagged_frames": flagged,
+        "average_frame_score": float(np.mean(scores)),
+        "median_frame_score": float(np.median(scores)),
+        "flagged_frame_fraction": flagged / len(frame_results),
+    }
+
+
 class VideoDetector:
-    def __init__(self, image_detector, audio_detector, max_frames=8):
+    def __init__(self, image_detector, audio_detector, max_frames=8, audio_unavailable_reason=None):
         self.image_detector = image_detector
         self.audio_detector = audio_detector
+        self.audio_unavailable_reason = audio_unavailable_reason
         self.max_frames = max(1, int(max_frames))
 
         self.ffmpeg = shutil.which("ffmpeg")
         self.ffprobe = shutil.which("ffprobe")
         if not self.ffmpeg or not self.ffprobe:
             raise RuntimeError("FFmpeg and FFprobe must be installed and available in PATH.")
+
+    def _sample_timestamps(self, duration):
+        frame_count = min(self.max_frames, max(1, math.ceil(duration / 2.0)))
+        return [
+            duration * (index + 0.5) / frame_count
+            for index in range(frame_count)
+        ]
 
     def _probe_media(self, video_path):
         try:
@@ -111,18 +137,17 @@ class VideoDetector:
 
     def predict(self, video_path):
         video_path = Path(video_path)
+        if video_path.suffix.lower() not in SUPPORTED_VIDEO_EXTENSIONS:
+            raise ValueError("Unsupported video format. Use MP4, MOV, MKV, or AVI.")
         if not video_path.is_file():
             raise ValueError("The video file could not be found.")
 
         duration, has_audio = self._probe_media(video_path)
 
-        # Midpoints of evenly sized time intervals avoid relying on the first
-        # frame and distribute the limited samples across the full runtime.
-        frame_count = min(self.max_frames, max(1, math.ceil(duration / 5.0)))
-        timestamps = [
-            duration * (index + 0.5) / frame_count
-            for index in range(frame_count)
-        ]
+        # Uniform midpoint sampling targets one frame every two seconds, with
+        # a fixed cap to bound inference time. These remain frame findings,
+        # not a whole-video verdict.
+        timestamps = self._sample_timestamps(duration)
         frame_results = []
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -148,6 +173,13 @@ class VideoDetector:
             audio_result = None
             if not has_audio:
                 audio_status = "no_audio_stream"
+                audio_status_note = "No audio stream was present in the video."
+            elif self.audio_detector is None:
+                audio_status = "audio_detector_unavailable"
+                audio_status_note = self.audio_unavailable_reason or (
+                    "An audio stream is present, but the audio detector was not initialized. "
+                    "No conclusion was made about the audio."
+                )
             else:
                 audio_path = temp_dir / "video_audio.wav"
                 audio_ok, audio_start = self._extract_audio(video_path, audio_path, duration)
@@ -160,15 +192,17 @@ class VideoDetector:
                             already_cropped=True,
                         )
                         audio_status = "analyzed"
+                        audio_status_note = None
                     except ValueError:
                         # A broken audio stream should not invalidate usable
                         # visual evidence from the same video.
                         audio_status = "audio_stream_unreadable"
+                        audio_status_note = "The audio stream could not be decoded for analysis."
                 else:
                     audio_status = "audio_stream_unreadable"
+                    audio_status_note = "The audio stream could not be decoded for analysis."
 
-        frame_scores = [item["score"] for item in frame_results]
-        ai_frames = sum(item["verdict"] == "AI-generated" for item in frame_results)
+        frame_summary = summarize_frame_scores(frame_results)
 
         return {
             "duration_seconds": round(duration, 2),
@@ -176,12 +210,17 @@ class VideoDetector:
             "frames_analyzed": len(frame_results),
             "frame_timestamps_seconds": [item["timestamp_seconds"] for item in frame_results],
             "frame_sampling_method": "Midpoint of uniform temporal intervals; sampled frames do not cover every moment.",
-            "ai_flagged_frames": ai_frames,
-            "average_frame_score": float(np.mean(frame_scores)),
+            **frame_summary,
             "frame_score_note": "Mean of sampled-frame model scores; not a whole-video probability.",
+            "robust_frame_summary": "median_frame_score",
+            "robust_frame_summary_note": (
+                "Median of sampled-frame model scores; a single outlier has limited influence. "
+                "This is not a whole-video authenticity verdict."
+            ),
             "frame_results": frame_results,
             "audio_track_present": has_audio,
             "audio_status": audio_status,
+            "audio_status_note": audio_status_note,
             "audio_analysis": audio_result,
             "interpretation": (
                 "Video frames and audio are evaluated separately. Only the listed "

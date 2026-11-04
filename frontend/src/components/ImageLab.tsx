@@ -4,12 +4,11 @@ import {
   Zap,
   RotateCw,
   AlertCircle,
-  FileCheck,
-  Maximize2,
 } from 'lucide-react';
 import { UploadZone } from './UploadZone';
 import { VerdictBanner } from './VerdictBanner';
 import { ScanningOverlay } from './ScanningOverlay';
+import { ForensicVisualizationWorkspace } from './ForensicVisualizationWorkspace';
 import { ImageAnalysisResult, HistoryItem, BackendStatus } from '../types/forensics';
 import { analyzeImage } from '../services/api';
 
@@ -25,17 +24,12 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
   const [scanPhase, setScanPhase] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
   const [result, setResult] = useState<ImageAnalysisResult | null>(null);
-  const [attributionImageError, setAttributionImageError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const explanation = result?.explanation;
-  const explanationHasImages = Boolean(
-    explanation?.overlay_png_base64 && explanation?.crop_png_base64
-  );
 
   const handleFileSelected = (file: File) => {
     setSelectedFile(file);
     setResult(null);
-    setAttributionImageError(false);
     setErrorMessage(null);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
@@ -48,7 +42,6 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
     setSelectedFile(null);
     setPreviewUrl(null);
     setResult(null);
-    setAttributionImageError(false);
     setErrorMessage(null);
   };
 
@@ -57,7 +50,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
 
     if (!backendStatus.connected) {
       setErrorMessage(
-        "The Python detector backend is offline. From the backend folder, run .\\.venv\\Scripts\\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8000."
+        "The Python detector backend is offline. From the backend folder, run .\\.venv\\Scripts\\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8002."
       );
       return;
     }
@@ -85,7 +78,6 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
       setScanProgress(100);
       setIsScanning(false);
       setResult(analysis);
-      setAttributionImageError(false);
 
       // Record exact completed audit in session history
       const historyItem: HistoryItem = {
@@ -95,8 +87,8 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
         mediaType: 'image',
         fileSizeFormatted: `${(selectedFile.size / 1024).toFixed(1)} KB`,
         verdictDisplay: analysis.verdict,
-        scoreDisplay: `${(analysis.score * 100).toFixed(2)}%`,
-        details: `Logit: ${analysis.logit !== undefined ? analysis.logit.toFixed(3) : '—'} • ${analysis.image_size[0]}×${analysis.image_size[1]}`,
+        scoreDisplay: `Logit ${analysis.logit !== undefined ? (analysis.logit > 0 ? `+${analysis.logit.toFixed(3)}` : analysis.logit.toFixed(3)) : '—'}`,
+        details: `Logit: ${analysis.logit !== undefined ? analysis.logit.toFixed(3) : '—'} (threshold ${analysis.decision_threshold.toFixed(3)}) • ${analysis.image_size[0]}×${analysis.image_size[1]}`,
         previewUrl: previewUrl || undefined,
         latencyMs: analysis.inferenceDurationMs,
         fullResult: { type: 'image', data: analysis },
@@ -125,7 +117,7 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
               </h3>
             </div>
             <p className="text-xs md:text-sm text-[#94A3B8] mt-1.5">
-              Production input: RGB; if the long edge exceeds 768 px, it is proportionally downscaled with bilinear interpolation, then JPEG-encoded at quality 60 (4:2:0). Model input preparation: resize the shorter edge to 440 px, center-crop to 384&times;384, then ImageNet-normalize.
+              Neural artifact detection and multi-layer forensic diagnostics for synthetic and manipulated imagery.
             </p>
           </div>
 
@@ -155,21 +147,23 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
                 Inference Protocol
               </div>
               <p className="text-xs text-[#94A3B8] leading-relaxed mb-4">
-                Upload any authentic or synthetic image to evaluate against the Community Forensics ViT-Small checkpoint.
+                ViT-Small/16 classifier — 576 non-overlapping 16×16 patches on a 384×384 center crop.
               </p>
 
-              <div className="p-3 rounded-xl bg-[#10111F] border border-white/5 font-mono text-[11px] text-[#94A3B8] space-y-1">
+              <div className="p-3 rounded-xl bg-[#10111F] border border-white/5 font-mono text-[11px] text-[#94A3B8] space-y-1.5">
                 <div className="flex justify-between">
-                  <span>PATCH SIZE:</span>
-                  <span className="text-white">16 &times; 16</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>INPUT SHAPE:</span>
+                  <span>MODEL INPUT:</span>
                   <span className="text-white">384 &times; 384</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>PATCH GRID:</span>
+                  <span className="text-white">576 (16&times;16)</span>
+                </div>
+                <div className="flex justify-between">
                   <span>LOGIT CUTOFF:</span>
-                  <span className="text-[#62E8FF]">&ge; 1.359375</span>
+                  <span className="text-[#62E8FF]">
+                    {result ? `≥ ${result.decision_threshold.toFixed(3)}` : '≥ 0.000'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -234,109 +228,108 @@ export const ImageLab: React.FC<ImageLabProps> = ({ onScanCompleted, backendStat
             currentPhase={scanPhase}
             progressPercent={scanProgress}
             mediaType="image"
-            modelLabel="ViT-S/16 · RGB → max 768 px long edge (bilinear) → JPEG q60 4:2:0 → 440 px short edge → 384×384 crop"
+            modelLabel="ViT-Small/16 · 384×384 Model Input"
           />
         )}
 
         {/* RESULTS SECTION */}
         {result && (
-          <div className="mt-8 space-y-5 animate-in fade-in duration-500">
+          <div className="mt-8 space-y-4 animate-in fade-in duration-500">
+            {/* 1. Main Verdict Banner (Visual Focus) */}
             <VerdictBanner
               verdict={result.verdict}
               score={result.score}
+              scoreCutoff={result.score_cutoff}
+              logit={result.logit}
+              decisionThreshold={result.decision_threshold}
               sourceLabel="ViT-Small/16 Classifier"
               latencyMs={result.inferenceDurationMs}
+              thresholdExplanation={`Threshold Rule: Logit at or above ${result.decision_threshold.toFixed(3)} → AI-generated; below ${result.decision_threshold.toFixed(3)} → Likely Real.`}
               subtitle={
                 result.verdict === 'AI-generated'
-                  ? 'Model logit output crossed the decision boundary (≥ 1.359375), flagging the sample as synthetic.'
-                  : 'Model logit output remained below the decision boundary (< 1.359375), evaluating as likely real according to this model.'
+                  ? `Model raw logit crossed the decision threshold (≥ ${result.decision_threshold.toFixed(3)}), flagging synthetic generation patterns.`
+                  : `Model raw logit remained below the decision threshold (< ${result.decision_threshold.toFixed(3)}), evaluating as likely authentic.`
               }
             />
 
-            {/* Detailed Telemetry Chips */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-              <div className="bg-[#121424] border border-white/5 rounded-xl p-3.5">
-                <div className="font-mono text-[10px] text-[#64748B] uppercase">MODEL LOGIT</div>
-                <div className="font-mono text-xl font-bold text-[#A78BFA] mt-0.5">
-                  {result.logit !== undefined ? result.logit.toFixed(3) : '—'}
+            {/* 2. Compact Telemetry Strip */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#121424] border border-white/5 rounded-xl p-3">
+                <div className="font-mono text-[10px] text-[#8290A8] uppercase tracking-wider">
+                  Source Size
                 </div>
-                <div className="text-[10px] text-[#64748B] mt-0.5">
-                  Cutoff threshold: 1.359
-                </div>
-              </div>
-
-              <div className="bg-[#121424] border border-white/5 rounded-xl p-3.5">
-                <div className="font-mono text-[10px] text-[#64748B] uppercase">IMAGE DIMENSIONS</div>
-                <div className="font-mono text-xl font-bold text-[#62E8FF] mt-0.5">
+                <div className="font-mono text-base font-bold text-white mt-0.5">
                   {result.image_size[0]} &times; {result.image_size[1]}
                 </div>
-                <div className="text-[10px] text-[#64748B] mt-0.5">
-                  Raw input resolution
-                </div>
               </div>
-
-              <div className="bg-[#121424] border border-white/5 rounded-xl p-3.5">
-                <div className="font-mono text-[10px] text-[#64748B] uppercase">MODEL IDENTIFIER</div>
-                <div className="font-mono text-base font-bold text-[#FF75D8] mt-0.5">
-                  ViT-Small/16
+              <div className="bg-[#121424] border border-white/5 rounded-xl p-3">
+                <div className="font-mono text-[10px] text-[#8290A8] uppercase tracking-wider">
+                  Inference Time
                 </div>
-                <div className="text-[10px] text-[#64748B] mt-0.5">
-                  RGB → max 768 px long edge (bilinear) → JPEG q60 4:2:0; model: 440 px short edge → 384&times;384 center crop + ImageNet normalization
-                </div>
-              </div>
-
-              <div className="bg-[#121424] border border-white/5 rounded-xl p-3.5">
-                <div className="font-mono text-[10px] text-[#64748B] uppercase">SPATIAL PATCHES</div>
-                <div className="font-mono text-xl font-bold text-[#10B981] mt-0.5">
-                  576 Patches
-                </div>
-                <div className="text-[10px] text-[#64748B] mt-0.5">
-                  16&times;16 patch dimensions
+                <div className="font-mono text-base font-bold text-[#A78BFA] mt-0.5">
+                  {result.inferenceDurationMs !== undefined
+                    ? `${(result.inferenceDurationMs / 1000).toFixed(2)}s`
+                    : '—'}
                 </div>
               </div>
             </div>
-            {result.analysis_note && (
-              <p className="text-xs text-[#94A3B8] leading-relaxed">
-                {result.analysis_note}
-              </p>
-            )}
-            <section className="rounded-2xl bg-[#121424] border border-[#A78BFA]/30 p-5 space-y-3">
-              <div>
-                <h4 className="font-bold text-sm text-[#A78BFA]">Image comparison and attribution</h4>
-                {explanationHasImages && explanation ? (
-                  <>
-                    <p className="text-xs text-[#94A3B8] mt-1">{explanation.method} · {explanation.scope}</p>
-                    <p className="text-xs text-[#94A3B8] mt-1">Approximate input-gradient attribution. It is not Grad-CAM, causal proof, or confirmation of manipulation.</p>
-                  </>
-                ) : (
-                  <p className="text-xs text-[#94A3B8] mt-1">A usable attribution image was not included in this response. The detector verdict and score are still available.</p>
-                )}
+
+            {/* 3. Probability Calibration (Kept separate, compact, single short notice) */}
+            <section
+              className="rounded-xl border border-white/10 bg-[#121424]/90 p-4"
+              aria-label="Probability calibration"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs uppercase tracking-wider text-[#A78BFA] font-semibold">
+                    Probability Calibration
+                  </span>
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+                      result.calibration_status === 'available'
+                        ? 'border-[#34D399]/30 bg-[#34D399]/10 text-[#34D399]'
+                        : 'border-white/15 bg-white/[0.04] text-[#A6B1C5]'
+                    }`}
+                  >
+                    {result.calibration_status === 'available' ? 'Active' : 'Unavailable'}
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#8290A8]">
+                  Independent from threshold verdict
+                </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <figure className="space-y-2">
-                  {previewUrl ? (
-                    <img className="w-full max-h-80 object-contain rounded-xl border border-white/10 bg-black/20" src={previewUrl} alt="Original uploaded image analyzed by TruthLens" />
-                  ) : (
-                    <p className="text-xs text-[#94A3B8]">Original image preview is unavailable.</p>
-                  )}
-                  <figcaption className="text-xs text-[#94A3B8]">Original uploaded image</figcaption>
-                </figure>
-                {explanationHasImages && explanation && !attributionImageError ? (
-                  <>
-                    <figure className="space-y-2">
-                      <img className="w-full max-h-80 object-contain rounded-xl border border-white/10 bg-black/20" src={`data:image/png;base64,${explanation.crop_png_base64}`} alt="Exact resized center crop analyzed by the image model" onError={() => setAttributionImageError(true)} />
-                      <figcaption className="text-xs text-[#94A3B8]">Exact model input crop</figcaption>
-                    </figure>
-                    <figure className="space-y-2">
-                      <img className="w-full max-h-80 object-contain rounded-xl border border-white/10 bg-black/20" src={`data:image/png;base64,${explanation.overlay_png_base64}`} alt="Positive input-gradient attribution overlay for the model output" onError={() => setAttributionImageError(true)} />
-                      <figcaption className="text-xs text-[#94A3B8]">Attribution overlay (red/yellow indicates stronger positive attribution)</figcaption>
-                    </figure>
-                  </>
-                ) : explanation ? (
-                  <p className="md:col-span-2 text-xs text-[#94A3B8]" role="status">The attribution image could not be displayed. The verdict and score are unaffected.</p>
-                ) : null}
-              </div>
+
+              {result.calibration_status === 'available' &&
+              result.ai_generated_probability !== undefined &&
+              result.genuine_probability !== undefined ? (
+                <div className="mt-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-[#FF75D8]/20 bg-[#FF75D8]/[0.05] p-3">
+                      <div className="text-xs text-[#94A3B8]">AI-generated Probability</div>
+                      <div className="mt-1 text-2xl font-bold text-[#FF75D8]">
+                        {(result.ai_generated_probability * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#62E8FF]/20 bg-[#62E8FF]/[0.05] p-3">
+                      <div className="text-xs text-[#94A3B8]">Genuine Probability</div>
+                      <div className="mt-1 text-2xl font-bold text-[#62E8FF]">
+                        {(result.genuine_probability * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[#8290A8]">
+                    Calibration method: {result.calibration_method} scaling.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-[#94A3B8] leading-relaxed">
+                  Calibrated probability is currently unavailable. TruthLens reports raw classification logits; calibrated probabilities are withheld until an independent calibrator is validated.
+                </p>
+              )}
             </section>
+
+            {/* 4. Forensic Visualization Workspace */}
+            <ForensicVisualizationWorkspace originalUrl={previewUrl} explanation={explanation} />
           </div>
         )}
       </div>

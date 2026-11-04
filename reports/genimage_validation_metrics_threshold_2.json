@@ -1,0 +1,341 @@
+{
+  "dataset": "C:\\Users\\adora\\DeepfakeLab\\data\\genimage_validation_sample",
+  "positive_class": "ai",
+  "negative_class": "nature",
+  "threshold": 2.0,
+  "score_definition": "sigmoid(raw_logit - decision_threshold); uncalibrated threshold-relative score, not probability",
+  "model": "Community Forensics ViT-S/16",
+  "prediction_count": 400,
+  "successful_prediction_count": 400,
+  "inference_error_count": 0,
+  "overall": {
+    "sample_counts": {
+      "total": 400,
+      "scored": 400,
+      "inference_errors": 0,
+      "coverage": 1.0,
+      "classes_total": {
+        "ai": 200,
+        "nature": 200
+      },
+      "classes_scored": {
+        "ai": 200,
+        "nature": 200
+      },
+      "classes_with_inference_errors": {
+        "ai": 0,
+        "nature": 0
+      }
+    },
+    "confusion": {
+      "tp": 148,
+      "fp": 2,
+      "tn": 198,
+      "fn": 52
+    },
+    "metrics": {
+      "accuracy": 0.865,
+      "precision": 0.9866666666666667,
+      "recall": 0.74,
+      "specificity": 0.99,
+      "f1": 0.8457142857142858,
+      "balanced_accuracy": 0.865,
+      "false_positive_rate": 0.01,
+      "false_negative_rate": 0.26
+    }
+  },
+  "by_generator": {
+    "ADM": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 25,
+        "fn": 19
+      },
+      "metrics": {
+        "accuracy": 0.62,
+        "precision": 1.0,
+        "recall": 0.24,
+        "specificity": 1.0,
+        "f1": 0.3870967741935484,
+        "balanced_accuracy": 0.62,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.76
+      }
+    },
+    "BigGAN": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 11,
+        "fp": 0,
+        "tn": 25,
+        "fn": 14
+      },
+      "metrics": {
+        "accuracy": 0.72,
+        "precision": 1.0,
+        "recall": 0.44,
+        "specificity": 1.0,
+        "f1": 0.6111111111111112,
+        "balanced_accuracy": 0.72,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.56
+      }
+    },
+    "glide": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 23,
+        "fp": 0,
+        "tn": 25,
+        "fn": 2
+      },
+      "metrics": {
+        "accuracy": 0.96,
+        "precision": 1.0,
+        "recall": 0.92,
+        "specificity": 1.0,
+        "f1": 0.9583333333333334,
+        "balanced_accuracy": 0.96,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.08
+      }
+    },
+    "Midjourney": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 21,
+        "fp": 1,
+        "tn": 24,
+        "fn": 4
+      },
+      "metrics": {
+        "accuracy": 0.9,
+        "precision": 0.9545454545454546,
+        "recall": 0.84,
+        "specificity": 0.96,
+        "f1": 0.8936170212765957,
+        "balanced_accuracy": 0.8999999999999999,
+        "false_positive_rate": 0.04,
+        "false_negative_rate": 0.16
+      }
+    },
+    "stable_diffusion_v_1_4": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 25,
+        "fp": 1,
+        "tn": 24,
+        "fn": 0
+      },
+      "metrics": {
+        "accuracy": 0.98,
+        "precision": 0.9615384615384616,
+        "recall": 1.0,
+        "specificity": 0.96,
+        "f1": 0.9803921568627451,
+        "balanced_accuracy": 0.98,
+        "false_positive_rate": 0.04,
+        "false_negative_rate": 0.0
+      }
+    },
+    "stable_diffusion_v_1_5": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 25,
+        "fp": 0,
+        "tn": 25,
+        "fn": 0
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "specificity": 1.0,
+        "f1": 1.0,
+        "balanced_accuracy": 1.0,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.0
+      }
+    },
+    "VQDM": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 12,
+        "fp": 0,
+        "tn": 25,
+        "fn": 13
+      },
+      "metrics": {
+        "accuracy": 0.74,
+        "precision": 1.0,
+        "recall": 0.48,
+        "specificity": 1.0,
+        "f1": 0.6486486486486487,
+        "balanced_accuracy": 0.74,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.52
+      }
+    },
+    "wukong": {
+      "sample_counts": {
+        "total": 50,
+        "scored": 50,
+        "inference_errors": 0,
+        "coverage": 1.0,
+        "classes_total": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_scored": {
+          "ai": 25,
+          "nature": 25
+        },
+        "classes_with_inference_errors": {
+          "ai": 0,
+          "nature": 0
+        }
+      },
+      "confusion": {
+        "tp": 25,
+        "fp": 0,
+        "tn": 25,
+        "fn": 0
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "specificity": 1.0,
+        "f1": 1.0,
+        "balanced_accuracy": 1.0,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.0
+      }
+    }
+  },
+  "exact_hash_overlap_count": 0,
+  "exact_hash_overlaps": [],
+  "previous_evaluation_files_indexed": 189,
+  "inference_errors": []
+}

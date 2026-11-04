@@ -106,42 +106,44 @@ export default function App() {
           <MethodologyView backendStatus={backendStatus} />
         )}
 
-        {/* TECHNICALLY ACCURATE DOSSIER FOOTNOTE */}
-        <section className="mt-10 rounded-2xl bg-[#14162B]/80 border border-white/5 p-6 backdrop-blur-md">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
-            <div className="font-bold text-sm text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#62E8FF]" />
-              TRUTHLENS OPERATIONAL SUMMARY &amp; INTEGRITY PRINCIPLES
+        {/* TECHNICALLY ACCURATE DOSSIER FOOTNOTE (Shown only on Dashboard to prevent repetition across individual labs) */}
+        {activeTab === 'dashboard' && (
+          <section className="mt-10 rounded-2xl bg-[#14162B]/80 border border-white/5 p-6 backdrop-blur-md">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+              <div className="font-bold text-sm text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#62E8FF]" />
+                TRUTHLENS OPERATIONAL SUMMARY &amp; INTEGRITY PRINCIPLES
+              </div>
+              <button
+                onClick={() => setActiveTab('methodology')}
+                className="font-mono text-[10px] text-[#62E8FF] hover:underline cursor-pointer"
+              >
+                Full Technical Methodology &rarr;
+              </button>
             </div>
-            <button
-              onClick={() => setActiveTab('methodology')}
-              className="font-mono text-[10px] text-[#62E8FF] hover:underline cursor-pointer"
-            >
-              Full Technical Methodology &rarr;
-            </button>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-[#94A3B8] leading-relaxed">
-            <div>
-              <div className="font-bold text-[#62E8FF] mb-1.5 uppercase font-mono">
-                Image Modality (ViT-Small/16)
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-[#94A3B8] leading-relaxed">
+              <div>
+                <div className="font-bold text-[#62E8FF] mb-1.5 uppercase font-mono">
+                  Image Modality (ViT-Small/16)
+                </div>
+                Fine-tuned ViT-Small/16 classifier. Applies the documented production image preprocessing, then evaluates 576 non-overlapping 16&times;16 spatial patches. Each result reports its raw-logit cutoff and uncalibrated score.
               </div>
-              Fine-tuned ViT-Small/16 classifier. Resamples inputs to 384&times;384 and evaluates 576 non-overlapping 16&times;16 spatial patches against a logit cutoff threshold of 1.359375.
-            </div>
-            <div>
-              <div className="font-bold text-[#A78BFA] mb-1.5 uppercase font-mono">
-                Audio Modality (PellaV2)
+              <div>
+                <div className="font-bold text-[#A78BFA] mb-1.5 uppercase font-mono">
+                  Audio Modality (PellaV2)
+                </div>
+                PellaV2 detector with Wav2Vec-BERT backbone. FFmpeg converts audio to 16,000 Hz mono PCM and evaluates a four-second central crop with a 0.50 decision threshold.
               </div>
-              PellaV2 detector with Wav2Vec-BERT backbone. FFmpeg converts audio to 16,000 Hz mono PCM and evaluates a four-second central crop with a 0.50 decision threshold.
-            </div>
-            <div>
-              <div className="font-bold text-[#FF75D8] mb-1.5 uppercase font-mono">
-                Core Constraints &amp; Boundaries
+              <div>
+                <div className="font-bold text-[#FF75D8] mb-1.5 uppercase font-mono">
+                  Core Constraints &amp; Boundaries
+                </div>
+                Model scores are uncalibrated outputs, not probabilities. Distribution shifts such as compression can affect results; replayed synthetic speech and manipulations between sampled video frames may be missed.
               </div>
-              Model scores are uncalibrated indices, not probabilities. Real media may be falsely flagged by compression; re-recorded speech and unsampled video frames evade detection.
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* FOOTER */}
         <footer className="mt-8 pt-6 border-t border-white/5 text-center font-mono text-[11px] text-[#64748B]">

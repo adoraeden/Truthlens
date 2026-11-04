@@ -1,0 +1,3 @@
+path,label,source_set,split
+test_videos/Golgappe-Ka-SnapYT.App.mp4,fake,existing_video_smoke,exploratory_seen
+test_videos/video_20261031_152557.mp4,real,existing_video_smoke,exploratory_seen
