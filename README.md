@@ -2,7 +2,7 @@
 
 [![Hackathon](https://img.shields.io/badge/NEURAL%20STORM%202026-FT--02%20Synthetic%20Media-blue.svg)](https://github.com/adoraeden/Truthlens)
 [![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite%208%20%7C%20Tailwind%204-61DAFB.svg)](frontend/)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI%20%7C%20PyTorch%20%7C%20Uvicorn-009688.svg)](src/)
+[![Backend](https://img.shields.io/badge/Backend-Python%20%7C%20FastAPI%20%7C%20PyTorch%20%7C%20Uvicorn-009688.svg)](src/)
 
 TruthLens is a multimodal forensic screening engine developed for **NEURAL STORM 2026** under **Problem Statement FT-02: Deepfake & Synthetic Media Detection**.
 
