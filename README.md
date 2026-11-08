@@ -15,6 +15,12 @@ It provides newsrooms, digital forensic analysts, and platforms with an assistiv
 - Adora Eden
 
 ---
+## Competition Achievement
+
+**NEURAL STORM 2026 — 98th Rank out of 329 participating teams**
+
+TruthLens was developed for Problem Statement FT-02: Deepfake & Synthetic Media Detection.
+
 
 ## 1. Problem Statement & Motivation
 
