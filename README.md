@@ -21,6 +21,22 @@ It provides newsrooms, digital forensic analysts, and platforms with an assistiv
 
 TruthLens was developed for Problem Statement FT-02: Deepfake & Synthetic Media Detection.
 
+---
+# TruthLens: Multimodal Deepfake & Synthetic Media Forensic Engine
+
+[Keep your existing introduction and project description here.]
+
+## Demo Video
+
+Watch the complete TruthLens demonstration, covering the image, audio, and video detection workflows, forensic analysis, and project architecture.
+
+Watch the TruthLens Demo: https://drive.google.com/file/d/1g4pe0x7OaICENe-HBYVsj1mlpCGY0JVy/view?usp=sharing
+
+---
+
+## 1. Problem Statement & Motivation
+
+[Keep the rest of your existing README unchanged.]
 
 ## 1. Problem Statement & Motivation
 
