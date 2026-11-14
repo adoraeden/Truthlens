@@ -193,7 +193,7 @@ class VideoDetector:
                         )
                         audio_status = "analyzed"
                         audio_status_note = None
-                    except ValueError:
+                    except Exception:
                         # A broken audio stream should not invalidate usable
                         # visual evidence from the same video.
                         audio_status = "audio_stream_unreadable"
