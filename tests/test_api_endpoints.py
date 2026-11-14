@@ -261,3 +261,20 @@ class ApiEndpointTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+    def test_audio_preview_rejects_unsupported_extension(self):
+        async def run_test():
+            upload = UploadFile(
+                filename="recording.xyz",
+                file=io.BytesIO(b"not audio"),
+            )
+            with self.assertRaises(HTTPException) as context:
+                await api_server.convert_audio_preview(
+                    api_server.BackgroundTasks(),
+                    upload,
+                )
+            self.assertEqual(context.exception.status_code, 415)
+            self.assertIn("Unsupported audio file format", context.exception.detail)
+
+        asyncio.run(run_test())
