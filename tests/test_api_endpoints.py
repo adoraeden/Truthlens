@@ -128,6 +128,51 @@ class ApiEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 415)
         self.assertIn("Unsupported video file format", response.json()["detail"])
 
+    def test_video_preview_conversion_failure_returns_422_and_cleans_temp_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original_named_tempfile = tempfile.NamedTemporaryFile
+
+            def create_temp_file(**kwargs):
+                return original_named_tempfile(dir=directory, **kwargs)
+
+            failed_ffmpeg = type(
+                "FailedProcess",
+                (),
+                {"returncode": 1, "stderr": b"simulated ffmpeg failure"},
+            )()
+
+            with (
+                patch.object(api_server.shutil, "which", return_value="ffmpeg"),
+                patch.object(
+                    api_server.tempfile,
+                    "NamedTemporaryFile",
+                    side_effect=create_temp_file,
+                ),
+                patch.object(
+                    api_server.subprocess,
+                    "run",
+                    return_value=failed_ffmpeg,
+                ),
+                TestClient(app) as client,
+            ):
+                response = client.post(
+                    "/api/convert/video-preview",
+                    files={
+                        "file": (
+                            "broken.mp4",
+                            io.BytesIO(b"not a real video"),
+                            "video/mp4",
+                        )
+                    },
+                )
+
+            self.assertEqual(response.status_code, 422)
+            self.assertIn(
+                "Video preview conversion failed",
+                response.json()["detail"],
+            )
+            self.assertEqual(list(Path(directory).iterdir()), [])
+
     def test_upload_over_size_limit_returns_413(self):
         async def run_test():
             upload = UploadFile(
