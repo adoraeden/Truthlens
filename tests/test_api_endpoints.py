@@ -1,7 +1,14 @@
+import asyncio
 import io
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+from fastapi import HTTPException, UploadFile
 from fastapi.testclient import TestClient
+
+import src.api_server as api_server
 from src.api_server import app, detectors
 
 
@@ -110,10 +117,101 @@ class ApiEndpointTests(unittest.TestCase):
         with TestClient(app) as client:
             response = client.post(
                 "/api/convert/video-preview",
-                files={"file": ("test.xyz", io.BytesIO(b"data"), "application/octet-stream")},
+                files={
+                    "file": (
+                        "test.xyz",
+                        io.BytesIO(b"data"),
+                        "application/octet-stream",
+                    )
+                },
             )
-            self.assertEqual(response.status_code, 415)
-            self.assertIn("Unsupported video file format", response.json()["detail"])
+        self.assertEqual(response.status_code, 415)
+        self.assertIn("Unsupported video file format", response.json()["detail"])
+
+    def test_upload_over_size_limit_returns_413(self):
+        async def run_test():
+            upload = UploadFile(
+                filename="large.wav",
+                file=io.BytesIO(b"12345"),
+            )
+
+            with patch.object(api_server, "MAX_UPLOAD_BYTES", 4):
+                with self.assertRaises(HTTPException) as context:
+                    await api_server.save_upload(upload, "audio")
+
+            self.assertEqual(context.exception.status_code, 413)
+            await upload.close()
+
+        asyncio.run(run_test())
+
+    def test_analysis_removes_temp_file_after_success(self):
+        async def run_test():
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "truthlens_test.wav"
+                path.write_bytes(b"test audio")
+
+                upload = UploadFile(
+                    filename="test.wav",
+                    file=io.BytesIO(b"test audio"),
+                )
+
+                with (
+                    patch.object(
+                        api_server,
+                        "save_upload",
+                        new_callable=AsyncMock,
+                        return_value=path,
+                    ),
+                    patch.dict(api_server.detectors, {"audio": object()}),
+                    patch.object(
+                        api_server,
+                        "run_in_threadpool",
+                        new_callable=AsyncMock,
+                        return_value={"verdict": "Likely real"},
+                    ),
+                ):
+                    result = await api_server.analyze_upload(upload, "audio")
+
+                self.assertTrue(result["success"])
+                self.assertFalse(path.exists())
+                self.assertTrue(upload.file.closed)
+
+        asyncio.run(run_test())
+
+    def test_analysis_removes_temp_file_after_detector_failure(self):
+        async def run_test():
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "truthlens_test.wav"
+                path.write_bytes(b"test audio")
+
+                upload = UploadFile(
+                    filename="test.wav",
+                    file=io.BytesIO(b"test audio"),
+                )
+
+                with (
+                    patch.object(
+                        api_server,
+                        "save_upload",
+                        new_callable=AsyncMock,
+                        return_value=path,
+                    ),
+                    patch.dict(api_server.detectors, {"audio": object()}),
+                    patch.object(
+                        api_server,
+                        "run_in_threadpool",
+                        new_callable=AsyncMock,
+                        side_effect=RuntimeError("Simulated detector failure"),
+                    ),
+                ):
+                    with self.assertRaises(HTTPException) as context:
+                        await api_server.analyze_upload(upload, "audio")
+
+                self.assertEqual(context.exception.status_code, 500)
+                self.assertFalse(path.exists())
+                self.assertTrue(upload.file.closed)
+
+        asyncio.run(run_test())
 
 
 if __name__ == "__main__":
