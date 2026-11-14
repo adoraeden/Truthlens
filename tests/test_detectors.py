@@ -378,6 +378,32 @@ class VideoDetectorTests(unittest.TestCase):
         self.assertEqual(result["audio_status_note"], "PellaV2 skipped by RAM guard.")
         self.assertIsNone(result["audio_analysis"])
 
+    def test_video_keeps_visual_result_when_audio_inference_raises_unexpected_error(self):
+        with tempfile.TemporaryDirectory() as folder:
+            video = Path(folder) / "clip.mp4"
+            video.touch()
+
+            class Images:
+                def predict(self, image):
+                    return {"verdict": "Likely real", "score": 0.2, "logit": -1.0}
+
+            class Audio:
+                def predict(self, *args, **kwargs):
+                    raise RuntimeError("Unexpected audio inference failure")
+
+            detector = VideoDetector(Images(), Audio(), max_frames=1)
+            detector._probe_media = lambda _: (4.0, True)
+            detector._extract_frame = lambda _, __, output: Image.new("RGB", (20, 20)).save(output) is None
+            detector._extract_audio = lambda _, output, duration: (True, 0.0)
+
+            result = detector.predict(video)
+
+        self.assertEqual(result["frames_analyzed"], 1)
+        self.assertEqual(result["audio_status"], "audio_stream_unreadable")
+        self.assertIsNone(result["audio_analysis"])
+        self.assertIn("could not be decoded", result["audio_status_note"])
+
+
     def test_video_method_comparison_is_robust_to_one_flagged_outlier(self):
         summary = summarize_methods([0.9, 0.1, 0.1, 0.1, 0.1])
         self.assertAlmostEqual(summary["mean"], 0.26)
@@ -476,6 +502,47 @@ class VideoDetectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "could not be found"):
             detector.predict("does-not-exist.mp4")
 
+    def test_probe_media_rejects_missing_video_stream_and_invalid_duration(self):
+        import src.video_detector as video_module
+
+        detector = object.__new__(VideoDetector)
+        detector.ffprobe = "ffprobe"
+        invalid_cases = [
+            (
+                {"streams": [{"codec_type": "audio"}], "format": {"duration": "2.0"}},
+                "does not contain a video stream",
+            ),
+            (
+                {
+                    "streams": [{"codec_type": "video", "duration": "nan"}],
+                    "format": {"duration": "inf"},
+                },
+                "duration could not be determined",
+            ),
+        ]
+
+        for metadata, message in invalid_cases:
+            with self.subTest(metadata=metadata):
+                completed = SimpleNamespace(
+                    returncode=0,
+                    stdout=json.dumps(metadata),
+                    stderr="",
+                )
+                with patch.object(video_module.subprocess, "run", return_value=completed):
+                    with self.assertRaisesRegex(ValueError, message):
+                        detector._probe_media("clip.mp4")
+
+    def test_probe_media_rejects_malformed_json(self):
+        import src.video_detector as video_module
+
+        detector = object.__new__(VideoDetector)
+        detector.ffprobe = "ffprobe"
+        completed = SimpleNamespace(returncode=0, stdout="{not-json", stderr="")
+
+        with patch.object(video_module.subprocess, "run", return_value=completed):
+            with self.assertRaisesRegex(ValueError, "invalid or cannot be read"):
+                detector._probe_media("clip.mp4")
+
     def test_video_passes_precropped_audio_and_original_timing_to_audio_detector(self):
         with tempfile.TemporaryDirectory() as folder:
             video = Path(folder) / "clip.mp4"
@@ -526,7 +593,7 @@ class AudioDetectorTests(unittest.TestCase):
 
         with (
             patch.object(audio_module, "available_memory_gb", return_value=0.7),
-            patch.object(audio_module.pella, "Detector", side_effect=AssertionError("model must not load")),
+            patch.dict("sys.modules", {"pellav2_infer": SimpleNamespace(Detector=lambda: self.fail("model must not load"))}),
         ):
             with self.assertRaisesRegex(RuntimeError, r"at least \d+\.\d+ GB"):
                 AudioDetector()
@@ -535,6 +602,50 @@ class AudioDetectorTests(unittest.TestCase):
         detector = object.__new__(AudioDetector)
         with self.assertRaisesRegex(ValueError, "Unsupported audio format"):
             detector.predict("clip.xyz")
+
+    def test_audio_duration_rejects_nonfinite_zero_and_too_short_values(self):
+        import src.audio_detector as audio_module
+
+        detector = object.__new__(AudioDetector)
+        detector.ffprobe = "ffprobe"
+
+        for output in ("nan", "inf", "0", "0.1"):
+            with self.subTest(duration=output):
+                completed = SimpleNamespace(returncode=0, stdout=output)
+                with patch.object(audio_module.subprocess, "run", return_value=completed):
+                    with self.assertRaisesRegex(ValueError, "invalid|too short"):
+                        detector._get_duration("clip.wav")
+
+    def test_nonfinite_audio_waveform_is_rejected(self):
+        import src.audio_detector as audio_module
+
+        detector = object.__new__(AudioDetector)
+        detector.ffmpeg = "ffmpeg"
+        detector.ffprobe = "ffprobe"
+        detector.device = torch.device("cpu")
+        detector.model = SimpleNamespace()
+
+        def fake_ffmpeg(command, **kwargs):
+            Path(command[-1]).write_bytes(b"converted wav")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as folder:
+            audio = Path(folder) / "invalid.wav"
+            audio.write_bytes(b"input audio")
+            with (
+                patch.object(detector, "_get_duration", return_value=1.0),
+                patch.object(audio_module.subprocess, "run", side_effect=fake_ffmpeg),
+                patch.object(
+                    detector,
+                    "_pella",
+                    SimpleNamespace(
+                        load_clip=lambda _: np.array([np.nan], dtype=np.float32)
+                    ),
+                    create=True,
+                ),
+            ):
+                with self.assertRaisesRegex(ValueError, "empty or invalid"):
+                    detector.predict(audio)
 
     def test_precropped_window_skips_seek_but_standalone_audio_keeps_center_crop(self):
         import src.audio_detector as audio_module
@@ -564,7 +675,7 @@ class AudioDetectorTests(unittest.TestCase):
             with (
                 patch.object(detector, "_get_duration", side_effect=[4.0, 12.0]),
                 patch.object(audio_module.subprocess, "run", side_effect=fake_run),
-                patch.object(audio_module.pella, "load_clip", return_value=np.ones(64000, dtype=np.float32)),
+                patch.object(detector, "_pella", SimpleNamespace(load_clip=lambda _: np.ones(64000, dtype=np.float32)), create=True),
             ):
                 video_result = detector.predict(
                     precropped,
@@ -603,7 +714,7 @@ class AudioDetectorTests(unittest.TestCase):
                 wav.setsampwidth(2)
                 wav.setframerate(16000)
                 wav.writeframes(b"\x00\x00" * 8000)
-            with patch.object(audio_module.pella, "load_clip", return_value=np.zeros(64000, dtype=np.float32)):
+            with patch.object(detector, "_pella", SimpleNamespace(load_clip=lambda _: np.zeros(64000, dtype=np.float32)), create=True):
                 with self.assertRaisesRegex(ValueError, "recording is silent"):
                     detector.predict(audio)
 
