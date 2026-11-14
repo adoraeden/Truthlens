@@ -296,3 +296,22 @@ if __name__ == "__main__":
             self.assertTrue(upload.file.closed)
 
         asyncio.run(run_test())
+
+
+    def test_audio_preview_returns_503_when_ffmpeg_is_unavailable(self):
+        async def run_test():
+            upload = UploadFile(
+                filename="recording.wav",
+                file=io.BytesIO(b"audio bytes"),
+            )
+            with patch.object(api_server.shutil, "which", return_value=None):
+                with self.assertRaises(HTTPException) as context:
+                    await api_server.convert_audio_preview(
+                        api_server.BackgroundTasks(),
+                        upload,
+                    )
+            self.assertEqual(context.exception.status_code, 503)
+            self.assertIn("FFmpeg is not available", context.exception.detail)
+            self.assertTrue(upload.file.closed)
+
+        asyncio.run(run_test())
