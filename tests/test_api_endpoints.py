@@ -336,3 +336,47 @@ if __name__ == "__main__":
             self.assertTrue(upload.file.closed)
 
         asyncio.run(run_test())
+
+
+    def test_audio_preview_ffmpeg_failure_cleans_temporary_files(self):
+        async def run_test():
+            with tempfile.TemporaryDirectory() as directory:
+                original_named_tempfile = tempfile.NamedTemporaryFile
+
+                def create_temp_file(**kwargs):
+                    return original_named_tempfile(dir=directory, **kwargs)
+
+                failed_ffmpeg = type(
+                    "FailedProcess",
+                    (),
+                    {"returncode": 1, "stderr": b"simulated ffmpeg failure"},
+                )()
+
+                upload = UploadFile(
+                    filename="broken.wav",
+                    file=io.BytesIO(b"audio bytes"),
+                )
+                with (
+                    patch.object(api_server.shutil, "which", return_value="ffmpeg"),
+                    patch.object(
+                        api_server.tempfile,
+                        "NamedTemporaryFile",
+                        side_effect=create_temp_file,
+                    ),
+                    patch.object(
+                        api_server.subprocess,
+                        "run",
+                        return_value=failed_ffmpeg,
+                    ),
+                ):
+                    with self.assertRaises(HTTPException) as context:
+                        await api_server.convert_audio_preview(
+                            api_server.BackgroundTasks(),
+                            upload,
+                        )
+
+                self.assertEqual(context.exception.status_code, 422)
+                self.assertIn("Audio preview conversion failed", context.exception.detail)
+                self.assertEqual(list(Path(directory).iterdir()), [])
+
+        asyncio.run(run_test())
