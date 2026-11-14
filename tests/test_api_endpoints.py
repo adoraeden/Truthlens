@@ -315,3 +315,24 @@ if __name__ == "__main__":
             self.assertTrue(upload.file.closed)
 
         asyncio.run(run_test())
+
+
+    def test_audio_preview_rejects_upload_over_size_limit(self):
+        async def run_test():
+            upload = UploadFile(
+                filename="large.wav",
+                file=io.BytesIO(b"12345"),
+            )
+            with patch.object(api_server, "MAX_UPLOAD_BYTES", 4):
+                with patch.object(api_server.shutil, "which") as ffmpeg_lookup:
+                    with self.assertRaises(HTTPException) as context:
+                        await api_server.convert_audio_preview(
+                            api_server.BackgroundTasks(),
+                            upload,
+                        )
+            self.assertEqual(context.exception.status_code, 413)
+            self.assertIn("100 MB upload limit", context.exception.detail)
+            ffmpeg_lookup.assert_not_called()
+            self.assertTrue(upload.file.closed)
+
+        asyncio.run(run_test())
