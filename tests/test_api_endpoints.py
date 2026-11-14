@@ -278,3 +278,21 @@ if __name__ == "__main__":
             self.assertIn("Unsupported audio file format", context.exception.detail)
 
         asyncio.run(run_test())
+
+
+    def test_audio_preview_rejects_empty_upload_and_closes_file(self):
+        async def run_test():
+            upload = UploadFile(
+                filename="empty.wav",
+                file=io.BytesIO(b""),
+            )
+            with self.assertRaises(HTTPException) as context:
+                await api_server.convert_audio_preview(
+                    api_server.BackgroundTasks(),
+                    upload,
+                )
+            self.assertEqual(context.exception.status_code, 400)
+            self.assertIn("empty", context.exception.detail.lower())
+            self.assertTrue(upload.file.closed)
+
+        asyncio.run(run_test())
