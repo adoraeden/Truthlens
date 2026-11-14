@@ -502,6 +502,47 @@ class VideoDetectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "could not be found"):
             detector.predict("does-not-exist.mp4")
 
+    def test_probe_media_rejects_missing_video_stream_and_invalid_duration(self):
+        import src.video_detector as video_module
+
+        detector = object.__new__(VideoDetector)
+        detector.ffprobe = "ffprobe"
+        invalid_cases = [
+            (
+                {"streams": [{"codec_type": "audio"}], "format": {"duration": "2.0"}},
+                "does not contain a video stream",
+            ),
+            (
+                {
+                    "streams": [{"codec_type": "video", "duration": "nan"}],
+                    "format": {"duration": "inf"},
+                },
+                "duration could not be determined",
+            ),
+        ]
+
+        for metadata, message in invalid_cases:
+            with self.subTest(metadata=metadata):
+                completed = SimpleNamespace(
+                    returncode=0,
+                    stdout=json.dumps(metadata),
+                    stderr="",
+                )
+                with patch.object(video_module.subprocess, "run", return_value=completed):
+                    with self.assertRaisesRegex(ValueError, message):
+                        detector._probe_media("clip.mp4")
+
+    def test_probe_media_rejects_malformed_json(self):
+        import src.video_detector as video_module
+
+        detector = object.__new__(VideoDetector)
+        detector.ffprobe = "ffprobe"
+        completed = SimpleNamespace(returncode=0, stdout="{not-json", stderr="")
+
+        with patch.object(video_module.subprocess, "run", return_value=completed):
+            with self.assertRaisesRegex(ValueError, "invalid or cannot be read"):
+                detector._probe_media("clip.mp4")
+
     def test_video_passes_precropped_audio_and_original_timing_to_audio_detector(self):
         with tempfile.TemporaryDirectory() as folder:
             video = Path(folder) / "clip.mp4"
