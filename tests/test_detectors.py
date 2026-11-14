@@ -562,6 +562,50 @@ class AudioDetectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported audio format"):
             detector.predict("clip.xyz")
 
+    def test_audio_duration_rejects_nonfinite_zero_and_too_short_values(self):
+        import src.audio_detector as audio_module
+
+        detector = object.__new__(AudioDetector)
+        detector.ffprobe = "ffprobe"
+
+        for output in ("nan", "inf", "0", "0.1"):
+            with self.subTest(duration=output):
+                completed = SimpleNamespace(returncode=0, stdout=output)
+                with patch.object(audio_module.subprocess, "run", return_value=completed):
+                    with self.assertRaisesRegex(ValueError, "invalid|too short"):
+                        detector._get_duration("clip.wav")
+
+    def test_nonfinite_audio_waveform_is_rejected(self):
+        import src.audio_detector as audio_module
+
+        detector = object.__new__(AudioDetector)
+        detector.ffmpeg = "ffmpeg"
+        detector.ffprobe = "ffprobe"
+        detector.device = torch.device("cpu")
+        detector.model = SimpleNamespace()
+
+        def fake_ffmpeg(command, **kwargs):
+            Path(command[-1]).write_bytes(b"converted wav")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as folder:
+            audio = Path(folder) / "invalid.wav"
+            audio.write_bytes(b"input audio")
+            with (
+                patch.object(detector, "_get_duration", return_value=1.0),
+                patch.object(audio_module.subprocess, "run", side_effect=fake_ffmpeg),
+                patch.object(
+                    detector,
+                    "_pella",
+                    SimpleNamespace(
+                        load_clip=lambda _: np.array([np.nan], dtype=np.float32)
+                    ),
+                    create=True,
+                ),
+            ):
+                with self.assertRaisesRegex(ValueError, "empty or invalid"):
+                    detector.predict(audio)
+
     def test_precropped_window_skips_seek_but_standalone_audio_keeps_center_crop(self):
         import src.audio_detector as audio_module
 
