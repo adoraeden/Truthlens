@@ -380,3 +380,41 @@ if __name__ == "__main__":
                 self.assertEqual(list(Path(directory).iterdir()), [])
 
         asyncio.run(run_test())
+
+
+    def test_audio_preview_timeout_cleans_temporary_source(self):
+        async def run_test():
+            with tempfile.TemporaryDirectory() as directory:
+                original_named_tempfile = tempfile.NamedTemporaryFile
+
+                def create_temp_file(**kwargs):
+                    return original_named_tempfile(dir=directory, **kwargs)
+
+                upload = UploadFile(
+                    filename="slow.wav",
+                    file=io.BytesIO(b"audio bytes"),
+                )
+                with (
+                    patch.object(api_server.shutil, "which", return_value="ffmpeg"),
+                    patch.object(
+                        api_server.tempfile,
+                        "NamedTemporaryFile",
+                        side_effect=create_temp_file,
+                    ),
+                    patch.object(
+                        api_server.subprocess,
+                        "run",
+                        side_effect=api_server.subprocess.TimeoutExpired("ffmpeg", 120),
+                    ),
+                ):
+                    with self.assertRaises(HTTPException) as context:
+                        await api_server.convert_audio_preview(
+                            api_server.BackgroundTasks(),
+                            upload,
+                        )
+
+                self.assertEqual(context.exception.status_code, 422)
+                self.assertIn("timed out", context.exception.detail.lower())
+                self.assertEqual(list(Path(directory).iterdir()), [])
+
+        asyncio.run(run_test())
