@@ -378,6 +378,32 @@ class VideoDetectorTests(unittest.TestCase):
         self.assertEqual(result["audio_status_note"], "PellaV2 skipped by RAM guard.")
         self.assertIsNone(result["audio_analysis"])
 
+    def test_video_keeps_visual_result_when_audio_inference_raises_unexpected_error(self):
+        with tempfile.TemporaryDirectory() as folder:
+            video = Path(folder) / "clip.mp4"
+            video.touch()
+
+            class Images:
+                def predict(self, image):
+                    return {"verdict": "Likely real", "score": 0.2, "logit": -1.0}
+
+            class Audio:
+                def predict(self, *args, **kwargs):
+                    raise RuntimeError("Unexpected audio inference failure")
+
+            detector = VideoDetector(Images(), Audio(), max_frames=1)
+            detector._probe_media = lambda _: (4.0, True)
+            detector._extract_frame = lambda _, __, output: Image.new("RGB", (20, 20)).save(output) is None
+            detector._extract_audio = lambda _, output, duration: (True, 0.0)
+
+            result = detector.predict(video)
+
+        self.assertEqual(result["frames_analyzed"], 1)
+        self.assertEqual(result["audio_status"], "audio_stream_unreadable")
+        self.assertIsNone(result["audio_analysis"])
+        self.assertIn("could not be decoded", result["audio_status_note"])
+
+
     def test_video_method_comparison_is_robust_to_one_flagged_outlier(self):
         summary = summarize_methods([0.9, 0.1, 0.1, 0.1, 0.1])
         self.assertAlmostEqual(summary["mean"], 0.26)
@@ -526,7 +552,7 @@ class AudioDetectorTests(unittest.TestCase):
 
         with (
             patch.object(audio_module, "available_memory_gb", return_value=0.7),
-            patch.object(audio_module.pella, "Detector", side_effect=AssertionError("model must not load")),
+            patch.dict("sys.modules", {"pellav2_infer": SimpleNamespace(Detector=lambda: self.fail("model must not load"))}),
         ):
             with self.assertRaisesRegex(RuntimeError, r"at least \d+\.\d+ GB"):
                 AudioDetector()
@@ -564,7 +590,7 @@ class AudioDetectorTests(unittest.TestCase):
             with (
                 patch.object(detector, "_get_duration", side_effect=[4.0, 12.0]),
                 patch.object(audio_module.subprocess, "run", side_effect=fake_run),
-                patch.object(audio_module.pella, "load_clip", return_value=np.ones(64000, dtype=np.float32)),
+                patch.object(detector, "_pella", SimpleNamespace(load_clip=lambda _: np.ones(64000, dtype=np.float32)), create=True),
             ):
                 video_result = detector.predict(
                     precropped,
@@ -603,7 +629,7 @@ class AudioDetectorTests(unittest.TestCase):
                 wav.setsampwidth(2)
                 wav.setframerate(16000)
                 wav.writeframes(b"\x00\x00" * 8000)
-            with patch.object(audio_module.pella, "load_clip", return_value=np.zeros(64000, dtype=np.float32)):
+            with patch.object(detector, "_pella", SimpleNamespace(load_clip=lambda _: np.zeros(64000, dtype=np.float32)), create=True):
                 with self.assertRaisesRegex(ValueError, "recording is silent"):
                     detector.predict(audio)
 
