@@ -8,7 +8,7 @@ Start the Python backend in a terminal:
 
 ```powershell
 Set-Location 'C:\Users\adora\DeepfakeLab'
-.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8001
+.\.venv\Scripts\python.exe -m uvicorn src.api_server:app --host 127.0.0.1 --port 8002
 ```
 
 Start the web client in a second terminal:
@@ -18,7 +18,7 @@ Set-Location 'C:\Users\adora\DeepfakeLab\frontend'
 npm run dev
 ```
 
-Open `http://localhost:3000`. Vite proxies `/api` requests to the backend at `http://127.0.0.1:8001`. The backend health check is `http://127.0.0.1:8001/api/health`. See the backend [README](../README.md) for model details, preprocessing, limitations, and API routes.
+Open `http://localhost:3000`. Vite proxies `/api` requests to the backend at `http://127.0.0.1:8002`. The backend health check is `http://127.0.0.1:8002/api/health`. See the backend [README](../README.md) for model details, preprocessing, limitations, and API routes.
 
 The Python environment needs PyTorch, torchvision, timm, transformers, safetensors, Hugging Face Hub, FastAPI, Pillow, NumPy, soundfile, torchaudio, SciPy, and FFmpeg/FFprobe. The current workspace has a backend `.venv`, local PellaV2 weights, and installed frontend `node_modules`. First-time model startup may need network access for Hugging Face model files.
 

@@ -1,4 +1,3 @@
-
 import {
   ImageAnalysisResult,
   AudioAnalysisResult,
@@ -53,7 +52,7 @@ export async function checkBackendHealth(): Promise<BackendStatus> {
       connected: false,
       endpoint: API_BASE_URL,
       message:
-        'Python Microservice Offline. Start the API server on port 8000.',
+        'Python Microservice Offline. Start the API server on port 8002.',
     };
   } finally {
     clearTimeout(timeoutId);
