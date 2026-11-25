@@ -1,0 +1,30 @@
+{
+  "dataset": "CIFAKE official test split",
+  "checkpoint": "experiments\\cifake_cnn\\outputs\\checkpoints\\best_cifake_cnn.pt",
+  "checkpoint_epoch": 6,
+  "threshold": 0.5,
+  "image_size": 64,
+  "device": "cpu",
+  "metrics": {
+    "total_images": 20000,
+    "accuracy": 0.9567,
+    "precision": 0.958902733118971,
+    "recall": 0.9543,
+    "f1_score": 0.9565958299919808,
+    "confusion_matrix": [
+      [
+        9591,
+        409
+      ],
+      [
+        457,
+        9543
+      ]
+    ],
+    "class_mapping": {
+      "negative": "REAL",
+      "positive": "FAKE"
+    },
+    "test_loss": 0.12145715856850148
+  }
+}
