@@ -78,7 +78,7 @@ class EvaluationTests(unittest.TestCase):
             root = Path(tmp)
             checkpoint_path = root / "best.pt"
             output_path = root / "report.json"
-            model = CifakeCNN(input_size=32, widths=(4,), head_width=4)
+            model = CifakeCNN(input_size=32)
             optimizer = torch.optim.AdamW(model.parameters())
             training.save_checkpoint(
                 model, optimizer, epoch=2, val_loss=0.2, val_accuracy=0.9,
