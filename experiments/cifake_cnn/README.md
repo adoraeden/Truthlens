@@ -1,6 +1,6 @@
 # TruthLens — CIFAKE CNN Experiment (from-scratch training)
 
-**Status:** implementation complete; verification passed. The training loop is a **separate stage** and has not been written yet.
+**Status:** implementation and verification complete. Phase 2 (training pipeline in `training.py`) is implemented; see the Training section below.
 
 ## Purpose
 
@@ -72,6 +72,49 @@ Key components:
   one value per channel (robust, resolution-independent).
 - Small `Linear` head: maps pooled features to the single classification logit.
 
+## Training
+
+Train the custom CNN from scratch on CIFAKE (run from the repo root):
+
+```powershell
+.venv\Scripts\python.exe -B -m experiments.cifake_cnn.training
+```
+
+Flags:
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--image-size` | `64` | Square training input size |
+| `--batch-size` | `64` | Training batch size |
+| `--epochs` | `20` | Maximum epochs |
+| `--device` | auto | `cuda` or `cpu` |
+| `--seed` | `42` | Random seed |
+| `--output-dir` | `experiments/cifake_cnn/outputs` | Output directory |
+
+How it works (`training.py`):
+
+- Uses the existing `CifakeCNN` and the existing reproducible train/val split
+  (`make_train_val_split`) — no duplicated logic.
+- Loss: `BCEWithLogitsLoss` (the model returns raw logits).
+- Optimizer: `AdamW` with the configured `LEARNING_RATE` and `WEIGHT_DECAY`.
+- Tracks train + val loss and accuracy every epoch.
+- Saves the best-epoch checkpoint by val loss (model state, optimizer state,
+  epoch, `val_loss`/`val_accuracy`, `best_val_loss`).
+- Early stopping using `EARLY_STOPPING_PATIENCE` from `config.py`.
+
+Outputs (isolated under `experiments/cifake_cnn/outputs/` by default):
+
+- `checkpoints/best_cifake_cnn.pt` — best-epoch checkpoint.
+- `history.csv` — per-epoch rows (append-only; earlier epochs are preserved).
+
+Unit tests (small synthetic models/datasets only — no full CIFAKE training):
+
+```powershell
+.venv\Scripts\python.exe -B -m pytest experiments\cifake_cnn\test_training.py -q
+```
+
+Note: the official CIFAKE `test/` directory is never used for training or validation.
+
 ## GenImage — held out
 
 `data/genimage_validation_sample/` (8 generator dirs: ADM, BigGAN, glide,
@@ -89,6 +132,9 @@ the production image detector.
 - `config.py` — hyperparameters (batch 64, lr 3e-4, wd 0.01, 20 epochs, seed 42, ...).
 - `model.py` — `CifakeCNN`, `count_parameters`, `run_shape_test`.
 - `dataset.py` — CIFAKE loading, label remapping, 90/10 split, verification helpers.
+- `training.py` — training pipeline: loaders, train/eval epochs, AdamW + BCEWithLogitsLoss,
+  early stopping, best-checkpoint saving, history CSV, `main()` entry point.
+- `test_training.py` — unit tests for the training utilities (small synthetic models/datasets).
 - `__init__.py` — package marker.
 
 ## Verification results (from implementation time)
