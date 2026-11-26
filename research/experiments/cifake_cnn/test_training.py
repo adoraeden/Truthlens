@@ -1,4 +1,4 @@
-"""Tests for the CIFAKE CNN training utilities (experiments/cifake_cnn/training.py).
+"""Tests for the CIFAKE CNN training utilities (research/experiments/cifake_cnn/training.py).
 
 Uses small synthetic datasets and models only — no full CIFAKE training.
 """

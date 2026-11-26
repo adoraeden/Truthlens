@@ -1,6 +1,6 @@
 """CIFAKE loading and split utilities for the from-scratch CNN experiment.
 
-Dataset root: the local CIFAKE download at ``data/kaggle_image/`` (git-ignored).
+Dataset root: the local CIFAKE download at ``research/data/kaggle_image/`` (git-ignored).
 Only ``train/`` is used for training/validation; the official ``test/``
 directory stays separate for final evaluation.
 
@@ -44,7 +44,7 @@ def make_datasets(image_size=IMAGE_SIZE_MAIN):
     positive_index = train_ds.class_to_idx[POSITIVE_CLASS]
     for ds in (train_ds, test_ds):
         # ImageFolder sorts class names alphabetically: FAKE=0, REAL=1.
-        # Remap so the positive class is always 1 (TruthLens convention:
+        # Remap so the positive class is always 1 (experiment convention:
         # AI-generated is the positive class).
         ds.samples = [
             (path, 1 if target == positive_index else 0)

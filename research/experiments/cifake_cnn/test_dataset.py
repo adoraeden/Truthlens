@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from experiments.cifake_cnn import dataset as dataset_module
-from experiments.cifake_cnn.config import NEGATIVE_CLASS, POSITIVE_CLASS
+from research.experiments.cifake_cnn import dataset as dataset_module
+from research.experiments.cifake_cnn.config import NEGATIVE_CLASS, POSITIVE_CLASS
 
 
 class FakeDataset:

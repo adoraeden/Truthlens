@@ -1,4 +1,4 @@
-# Virtual environments
+# Python virtual environments
 .venv/
 venv/
 env/
@@ -7,26 +7,34 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
-*.pytest_cache/
+.pytest_cache/
 
-# Model checkpoints and weights (fetched at runtime / too large for git)
+# Model checkpoints and weights
 models/
+TruthLens/models/
 *.pt
 *.bin
 *.onnx
 *.safetensors
 UniversalFakeDetect/
-Community-Forensics/
+TruthLens/Community-Forensics/
 
-# Datasets and large sample archives
+# Research datasets (download locally; do not commit)
+research/data/kaggle_image/
+research/data/*.zip
+# Legacy locations are ignored during the local migration
 data/kaggle_image/
+
+# TruthLens datasets and large sample archives
+TruthLens/data/genimage_probe/
+TruthLens/data/genimage_validation_sample/
 data/genimage_probe/
 data/genimage_validation_sample/
-data/train.zip
-data/*.zip
+TruthLens/data/train.zip
+TruthLens/data/*.zip
 *.zip
 
-# Local test media folders and temp frames
+# Local test media folders and temporary frames
 test_images/
 test_audio/
 test_videos/
@@ -46,7 +54,7 @@ mistake_review/
 mistake_review.zip
 mistake_review_contact_sheet.jpg
 
-# Media files by extension (test clips, personal recordings, test dumps)
+# Media files by extension
 *.wav
 *.mp3
 *.m4a
@@ -59,29 +67,29 @@ mistake_review_contact_sheet.jpg
 *.mkv
 *.avi
 
-# Exception: allow documentation screenshots and frontend public assets
-!docs/screenshots/*
-!frontend/public/**
-!frontend/src/assets/**
+# Keep documentation screenshots and frontend assets
+!TruthLens/docs/screenshots/*
+!TruthLens/frontend/public/**
+!TruthLens/frontend/src/assets/**
 
 # Temporary test logs and outputs
 smoke_out*.txt
 tmp_ctrl.*
 
-# Environment variables & secrets
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
-frontend/.env
-frontend/.env.local
+TruthLens/frontend/.env
+TruthLens/frontend/.env.local
 
-# Node / Frontend build artifacts
-frontend/node_modules/
-frontend/dist/
+# Node / frontend build artifacts
+TruthLens/frontend/node_modules/
+TruthLens/frontend/dist/
 
-# Old evaluation scripts & local test dumps
-eval_audio*.py
-eval_audio*.txt
-eval_audio*.csv
-eval_results*.csv
-reports/genimage_error_review/*.png
+# Legacy evaluation dumps
+TruthLens/eval_audio*.py
+TruthLens/eval_audio*.txt
+TruthLens/eval_audio*.csv
+TruthLens/eval_results*.csv
+TruthLens/reports/genimage_error_review/*.png

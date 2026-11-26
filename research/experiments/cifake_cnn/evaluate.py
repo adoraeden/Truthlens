@@ -111,7 +111,7 @@ def main(argv=None):
     parser.add_argument("--checkpoint", type=Path, required=True,
                         help="Path to the trained best_cifake_cnn.pt checkpoint")
     parser.add_argument("--output", type=Path,
-                        default=Path("experiments/cifake_cnn/outputs/official_test_results.json"))
+                        default=Path("research/experiments/cifake_cnn/outputs/official_test_results.json"))
     parser.add_argument("--image-size", type=int, default=IMAGE_SIZE_MAIN)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--device", default=None, help="'cuda' or 'cpu'; default: auto-select")

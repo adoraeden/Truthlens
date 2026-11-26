@@ -8,9 +8,9 @@ Relies on the existing experiment package:
 
 Usage (from the repo root)::
 
-    python -B -m experiments.cifake_cnn.training [--device cuda] [--output-dir ...]
+    python -B -m research.experiments.cifake_cnn.training [--device cuda] [--output-dir ...]
 
-Outputs are isolated under ``experiments/cifake_cnn/outputs/`` by default:
+Outputs are isolated under ``research/experiments/cifake_cnn/outputs/`` by default:
 
 - ``outputs/checkpoints/best_cifake_cnn.pt`` — best-epoch checkpoint
   (model state, optimizer state, epoch, train/val metrics, best_val_loss,

@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: TruthLens/requirements.txt
 
       - name: Install FFmpeg
         run: |
@@ -33,9 +33,37 @@ jobs:
           sudo apt-get install -y ffmpeg
 
       - name: Install Python dependencies
+        working-directory: TruthLens
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Run test suite
+      - name: Run TruthLens test suite
+        working-directory: TruthLens
         run: python -m pytest -q
+
+      - name: Run PRISM CIFAKE experiment tests
+        run: python -m pytest -q research/experiments/cifake_cnn
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: TruthLens/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: TruthLens/frontend
+        run: npm ci
+
+      - name: Check frontend types
+        working-directory: TruthLens/frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: TruthLens/frontend
+        run: npm run build
+
+      - name: Run frontend tests
+        working-directory: TruthLens/frontend
+        run: node --import tsx --test tests/*.test.ts

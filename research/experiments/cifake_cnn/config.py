@@ -2,7 +2,7 @@
 
 All hyperparameters and paths live here so the rest of the experiment stays
 simple and easy to tweak. Nothing in this package touches the production
-TruthLens code in ``src/``.
+the original application code in ``TruthLens/src/``.
 """
 
 # --- Image size ---
@@ -19,7 +19,7 @@ RANDOM_SEED = 42
 
 # --- Classification setup ---
 NUM_CLASSES = 1          # one raw logit per image (binary)
-POSITIVE_CLASS = "FAKE"  # 1 = AI-generated (TruthLens convention)
+POSITIVE_CLASS = "FAKE"  # 1 = AI-generated (experiment convention)
 NEGATIVE_CLASS = "REAL"  # 0 = genuine
 
 # --- Dataset split ---
