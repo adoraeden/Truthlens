@@ -1,31 +1,31 @@
-# TruthLens — CIFAKE CNN Experiment (from-scratch training)
+# PRISM — CIFAKE CNN Experiment (from-scratch training)
 
 **Status:** implementation and verification complete. Phase 2 (training pipeline in `training.py`) is implemented; see the Training section below.
 
 ## Purpose
 
-A first machine-learning experiment for the TruthLens project: train a custom CNN
+A first independent PRISM machine-learning experiment: train a custom CNN
 **from random initialisation** on the CIFAKE dataset to classify AI-generated
 (`FAKE`) vs. genuine (`REAL`) images. The goal is to understand CNN training
 end-to-end — data → model → loss → gradients → checkpoints — before building
-the larger TruthLens training work.
+the broader PRISM research programme.
 
 ## Why a CNN from scratch?
 
-- The production TruthLens image detector is a pretrained ViT (see `src/image_detector.py`).
+- The original TruthLens application uses a pretrained ViT image detector (see `TruthLens/src/image_detector.py`).
   This experiment is intentionally independent: our own architecture, our own
   training, from random init.
 - CIFAKE is a balanced, local benchmark: 50k real / 50k fake in `train/`,
-  10k / 10k in `test/` (see `data/kaggle_image/`).
+  10k / 10k in `test/` (see `research/data/kaggle_image/`).
 
 ## Dataset and label mapping
 
-- Root: `data/kaggle_image/` (already present in the repo checkout).
+- Root: `research/data/kaggle_image/` (download locally; dataset files are git-ignored).
 - **Mapping (explicit, not the default): `FAKE = 1` (positive class), `REAL = 0`.**
   `dataset.py` remaps `ImageFolder`'s alphabetical assignment so the positive
   class is always 1 (`verify_label_mapping` checks every file).
-- `data/kaggle_image/train/` is the training + validation directory;
-  `data/kaggle_image/test/` is the official test set (never used for
+- `research/data/kaggle_image/train/` is the training + validation directory;
+  `research/data/kaggle_image/test/` is the official test set (never used for
   training/validation).
 
 ## Train / validation / test separation
@@ -57,7 +57,7 @@ Output  : [B, 1] raw logits (no sigmoid inside the model)
 ```
 
 **Actual trainable parameters: 889,633.** Verified by running `run_shape_test()`
-(`python -B -m experiments.cifake_cnn.model` from the repo root):
+(`python -B -m research.experiments.cifake_cnn.model` from the repository root):
 
 ```
 input 32x32: logits shape (4, 1); parameters: 889,633
@@ -89,7 +89,7 @@ Flags:
 | `--epochs` | `20` | Maximum epochs |
 | `--device` | auto | `cuda` or `cpu` |
 | `--seed` | `42` | Random seed |
-| `--output-dir` | `experiments/cifake_cnn/outputs` | Output directory |
+| `--output-dir` | `research/experiments/cifake_cnn/outputs` | Output directory |
 
 How it works (`training.py`):
 
@@ -102,7 +102,7 @@ How it works (`training.py`):
   epoch, `val_loss`/`val_accuracy`, `best_val_loss`).
 - Early stopping using `EARLY_STOPPING_PATIENCE` from `config.py`.
 
-Outputs (isolated under `experiments/cifake_cnn/outputs/` by default):
+Outputs (isolated under `research/experiments/cifake_cnn/outputs/` by default):
 
 - `checkpoints/best_cifake_cnn.pt` — best-epoch checkpoint.
 - `history.csv` — per-epoch rows (append-only; earlier epochs are preserved).
@@ -122,7 +122,7 @@ Midjourney, stable_diffusion_v_1_4, stable_diffusion_v_1_5, VQDM, wukong;
 manifest: 200 `ai` + 200 `nature`) is **separate from this experiment** and
 **must remain held out for generalisation evaluation only** (Stage 4).
 
-## Separate from production TruthLens
+## Relationship to the original TruthLens application
 
 Nothing under `src/` is modified; this package is additive and independent of
 the production image detector.
