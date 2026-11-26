@@ -36,7 +36,7 @@ PRISM is organised as a continuing research journey. The phases below describe t
 | 5 | Generalisation, robustness, and explainability | Planned |
 | 6 | Reproducible findings and a technical research report | Planned |
 
-See the [PRISM Research Roadmap](docs/PRISM_ROADMAP.md) for more detail and the [Project History](docs/PROJECT_HISTORY.md) for the original TruthLens application.
+See the [PRISM Research Roadmap](docs/PRISM_ROADMAP.md) for more detail and the [Project History](docs/PROJECT_HISTORY.md) for the original TruthLens application. The full original application README, including its detailed architecture, evaluation, setup, and limitations, is preserved in [LEGACY_TRUTHLENS.md](docs/LEGACY_TRUTHLENS.md).
 
 ## Existing research starting point
 
