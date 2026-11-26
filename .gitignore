@@ -22,10 +22,14 @@ TruthLens/Community-Forensics/
 # Research datasets (download locally; do not commit)
 research/data/kaggle_image/
 research/data/*.zip
+# Legacy locations are ignored during the local migration
+data/kaggle_image/
 
 # TruthLens datasets and large sample archives
 TruthLens/data/genimage_probe/
 TruthLens/data/genimage_validation_sample/
+data/genimage_probe/
+data/genimage_validation_sample/
 TruthLens/data/train.zip
 TruthLens/data/*.zip
 *.zip
