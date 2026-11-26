@@ -179,7 +179,7 @@ Run from the repository root:
 The current runner reproduces the existing training recipe. A unique output directory keeps earlier checkpoints and histories preserved:
 
 ```powershell
-.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.training --output-dir research/experiments/cifake_cnn/outputs/<run-name>
+.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.training --output-dir research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction
 ```
 
 Run focused experiment tests:
@@ -191,7 +191,7 @@ Run focused experiment tests:
 Evaluate the selected checkpoint on the official CIFAKE test split only when the experiment is ready for a final benchmark comparison. Adjust the two paths to match the run being evaluated:
 
 ```powershell
-.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.evaluate --checkpoint <checkpoint-path> --output <report-path>
+.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.evaluate --checkpoint research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction/checkpoints/best_cifake_cnn.pt --output research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction/official_test_results.json
 ```
 
 The local research environment may be CPU-only. The full CIFAKE training run used a Colab T4 GPU. Select a GPU runtime for substantial training runs.
