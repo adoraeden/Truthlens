@@ -1,54 +1,29 @@
 # PRISM — CIFAKE CNN Experiment (from-scratch training)
 
-**Status:** implementation and verification complete. Phase 2 (training pipeline in `training.py`) is implemented; see the Training section below.
+**Current status:** Phases 1–2 are complete. Phase 3 (generalisation) is the active research phase. The roadmap below distinguishes completed work from planned experiments.
 
 ## Purpose
 
-A first independent PRISM machine-learning experiment: train a custom CNN
-**from random initialisation** on the CIFAKE dataset to classify AI-generated
-(`FAKE`) vs. genuine (`REAL`) images. The goal is to understand CNN training
-end-to-end — data → model → loss → gradients → checkpoints — before building
-the broader PRISM research programme.
+Train and study a custom CNN **from random initialisation** on the CIFAKE dataset to classify AI-generated (`FAKE`) vs. genuine (`REAL`) images. The goal is to understand CNN training end-to-end — data → model → loss → gradients → checkpoints — and, most importantly, investigate whether learned image features generalise beyond the dataset used for training.
 
 ## Why a CNN from scratch?
 
-- The original TruthLens application uses a pretrained ViT image detector (see `TruthLens/src/image_detector.py`).
-  This experiment is intentionally independent: our own architecture, our own
-  training, from random init.
-- CIFAKE is a balanced, local benchmark: 50k real / 50k fake in `train/`,
-  10k / 10k in `test/` (see `research/data/kaggle_image/`).
+- The original TruthLens application uses a pretrained ViT image detector (see `TruthLens/src/image_detector.py`). This experiment is intentionally independent: it uses our own architecture and random initialisation.
+- CIFAKE is a balanced benchmark: 50,000 real and 50,000 fake images in `train/`, and 10,000 of each class in `test/` (see `research/data/kaggle_image/`).
+- The experiment is additive and does not modify the production TruthLens detector.
 
 ## Dataset and label mapping
 
 - Root: `research/data/kaggle_image/` (download locally; dataset files are git-ignored).
-- **Mapping (explicit, not the default): `FAKE = 1` (positive class), `REAL = 0`.**
-  `dataset.py` remaps `ImageFolder`'s alphabetical assignment so the positive
-  class is always 1 (`verify_label_mapping` checks every file).
-- `research/data/kaggle_image/train/` is the training + validation directory;
-  `research/data/kaggle_image/test/` is the official test set (never used for
-  training/validation).
+- **Mapping: `FAKE = 1` (positive class), `REAL = 0`.** `dataset.py` remaps ImageFolder's alphabetical assignment so this convention is explicit.
+- `research/data/kaggle_image/train/` is used for training and validation.
+- `research/data/kaggle_image/test/` is the official test set and must remain separate from training and model-selection decisions.
 
-## Train / validation / test separation
-
-- `make_train_val_split()` produces a **reproducible 90/10 split of the CIFAKE
-  train directory** (`seed=42`): ~90,000 train / 10,000 val.
-- Train and val indices are guaranteed disjoint and cover the directory
-  (`verify_split`).
-
-## Resolution: 32 (smoke) → 64 (main)
-
-- CIFAKE images are uniformly **32×32** RGB JPEGs (verified in Stage 0).
-- We start the smoke test at **32×32** (`IMAGE_SIZE_SMOKE`) — the native size,
-  fastest to iterate on the T4.
-- The main run uses **64×64** (`IMAGE_SIZE_MAIN`) — 2× the pixels, better
-  feature granularity, still cheap on a T4 for this small CNN.
-  (128×128 is available later if compute allows.)
-
-## Architecture (actual, random init)
+## Baseline architecture
 
 ```
-Input   : [B, 3, H, W]  (32 or 64, RGB)
-Stages  : 5 convolutional stages with increasing widths: 3 -> 32 -> 64 -> 96 -> 128 -> 160
+Input   : [B, 3, H, W] (32 or 64, RGB)
+Stages  : 5 convolutional stages, widths 3 -> 32 -> 64 -> 96 -> 128 -> 160
           Each stage:
             Conv2d(in, w, k=3, s=2, p=1) -> BatchNorm2d(w) -> ReLU
             Conv2d(w, w, k=3, s=1, p=1)  -> BatchNorm2d(w) -> ReLU
@@ -56,92 +31,169 @@ Head    : AdaptiveAvgPool2d(1) -> Flatten -> Linear(160, 64) -> ReLU -> Linear(6
 Output  : [B, 1] raw logits (no sigmoid inside the model)
 ```
 
-**Actual trainable parameters: 889,633.** Verified by running `run_shape_test()`
-(`python -B -m research.experiments.cifake_cnn.model` from the repository root):
+**Trainable parameters: 889,633.** The architecture was shape-tested at 32×32 and 64×64.
+
+## Completed work
+
+### Phase 1 — Foundation and data pipeline <badge status="complete">Complete</badge>
+
+- Implemented the custom CNN architecture from random initialisation.
+- Implemented CIFAKE loading and explicit `FAKE=1` / `REAL=0` label mapping.
+- Implemented reproducible, stratified 90/10 training/validation splitting with seed 42.
+- Verified that training and validation indices are disjoint and cover the training directory.
+- Added focused tests for the model and dataset utilities.
+
+### Phase 2 — Training pipeline and CIFAKE baseline <badge status="complete">Complete</badge>
+
+- Implemented training and validation loops using `BCEWithLogitsLoss` and AdamW.
+- Added deterministic seeding, early stopping, best-validation-loss checkpointing and append-only CSV training history.
+- Trained on a Google Colab NVIDIA Tesla T4 at 64×64 resolution, batch size 64, with a maximum of 20 epochs and early-stopping patience of 5.
+- Training stopped after 12 epochs; the best checkpoint was selected at epoch 6.
+
+**Recorded CIFAKE results**
+
+| Evaluation | Accuracy | Precision | Recall | F1 |
+|---|---:|---:|---:|---:|
+| Best validation checkpoint | 95.63% | — | — | — |
+| Official CIFAKE test (20,000 images) | 95.67% | 95.89% | 95.43% | 95.66% |
+
+Official-test confusion matrix (rows = actual REAL/FAKE, columns = predicted REAL/FAKE):
 
 ```
-input 32x32: logits shape (4, 1); parameters: 889,633
-input 64x64: logits shape (4, 1); parameters: 889,633
+                 Predicted
+                 REAL   FAKE
+Actual REAL      9591    409
+Actual FAKE       457   9543
 ```
 
-Key components:
-- `Conv2d`: learns filters (features from pixels).
-- `BatchNorm2d`: normalizes activations, helps training stability.
-- `ReLU`: introduces non-linearity.
-- `AdaptiveAvgPool2d(1)`: global average pooling — collapses the spatial map to
-  one value per channel (robust, resolution-independent).
-- Small `Linear` head: maps pooled features to the single classification logit.
+These are benchmark results on CIFAKE. They do not establish performance on unfamiliar generators or real-world media.
 
-## Training
+## Initial cross-dataset diagnostic
 
-Train the custom CNN from scratch on CIFAKE (run from the repo root):
+An exploratory evaluation was previously run on a **400-image GenImage sample** containing 200 AI-generated and 200 real/nature images drawn across eight generator folders.
+
+| Metric | Recorded result |
+|---|---:|
+| Accuracy | 49.25% |
+| Precision (FAKE positive) | 49.6% |
+| Recall (FAKE positive) | 92.5% |
+| F1 (FAKE positive) | 64.57% |
+
+Confusion matrix (rows = actual REAL/FAKE, columns = predicted REAL/FAKE):
+
+```
+                 Predicted
+                 REAL   FAKE
+Actual REAL        12    188
+Actual FAKE        15    185
+```
+
+The model predicted FAKE for 373 of the 400 images and correctly classified only 12 of the 200 real images. This indicates a severe false-positive problem on this small sample. The result is a diagnostic warning, not a reliable estimate of general real-world performance.
+
+**Research consequence:** CIFAKE performance is strong, but cross-dataset generalisation is not. We need to investigate dataset and preprocessing differences, model behaviour and source diversity rather than simply chase a higher CIFAKE accuracy.
+
+## Research roadmap
+
+### Phase 3 — Generalisation and cross-generator performance <badge status="active">Active</badge>
+
+**Objective:** understand and improve performance on data that differs from CIFAKE, while keeping comparisons fair and avoiding evaluation leakage.
+
+1. **3.1 — Data and evaluation audit**
+   - Verify image dimensions, formats, colour channels, class labels and preprocessing across datasets.
+   - Compare content and source distributions for real and generated images.
+   - Inspect prediction scores, confusion matrices and false-positive/false-negative examples by generator.
+   - Record exactly which preprocessing is applied in training and evaluation.
+   - Create a separate development set for experiment selection. The previously inspected 400-image GenImage sample is a reference diagnostic and must not be repeatedly used to tune the model.
+
+2. **3.2 — Controlled augmentation experiments**
+   - Establish an unchanged baseline run for comparison.
+   - Test spatial augmentation (for example, random resized crops and horizontal flips).
+   - Test image-quality transformations (for example, JPEG compression, resizing, mild blur and controlled noise).
+   - Test moderate colour and appearance variation.
+   - Run ablations one group at a time before testing a combined policy.
+   - Apply stochastic augmentation only to training data; keep validation and evaluation preprocessing deterministic.
+
+3. **3.3 — Training-source diversity**
+   - Investigate adding suitable images from multiple generator families.
+   - Keep real and generated examples reasonably comparable in content and processing.
+   - Separate training, development and final evaluation by source or generator where possible.
+   - Record dataset provenance, licences, class balance and generator coverage.
+
+4. **3.4 — Independent generalisation evaluation**
+   - Evaluate the selected model on generator families not used for training.
+   - Report accuracy, balanced accuracy, precision, recall, F1, ROC-AUC and confusion matrices.
+   - Break down results by generator and class, not just as one aggregate score.
+   - Compare against the original CIFAKE baseline and report limitations.
+   - Use multiple random seeds for promising configurations where compute permits.
+
+**Phase 3 success criterion:** demonstrate a repeatable improvement in external-data performance without hiding class-specific failures or materially sacrificing the CIFAKE benchmark. If an experiment does not improve generalisation, document that result rather than presenting it as a success.
+
+### Phase 4 — Real-world image robustness <badge status="planned">Planned</badge>
+
+- Evaluate controlled JPEG compression levels, resizing, blur, noise, crops and screenshot-like transformations.
+- Measure performance degradation as transformation severity increases.
+- Distinguish robustness to image processing from generalisation to new generators.
+- Keep transformed evaluation copies separate from training unless a specific robustness-training experiment is being tested.
+
+### Phase 5 — Explainability and feature investigation <badge status="planned">Planned</badge>
+
+- Explore Grad-CAM or related attribution methods to visualise regions influencing predictions.
+- Inspect feature maps and compare correct predictions with false positives and false negatives.
+- Investigate spatial and frequency-domain signals as separate evidence sources.
+- Check whether explanations are stable and meaningful; visual heatmaps are diagnostic aids, not proof of manipulation.
+
+### Phase 6 — Advanced model research <badge status="planned">Planned</badge>
+
+- Compare carefully selected CNN architecture variants.
+- Investigate spatial/frequency feature fusion and alternative classification heads.
+- Study calibration and uncertainty so that weak or unfamiliar inputs are not presented with unjustified confidence.
+- Consider ensembles only if independent evaluation shows a meaningful benefit.
+- Keep experimental models isolated from the production TruthLens detector until they have passed appropriate evaluation.
+
+## Research and reproducibility rules
+
+- Do not train on the official CIFAKE test set.
+- Do not repeatedly tune against the previously inspected 400-image GenImage diagnostic sample; use a separate development set and preserve an independent final evaluation set.
+- Change one major factor at a time during ablation experiments.
+- Record configuration, seed, dataset version, preprocessing, checkpoint and metrics for every run.
+- Compare models on the same evaluation examples and report per-class results.
+- Keep model checkpoints, datasets and large generated artifacts out of Git unless there is a specific, appropriate reason to version them.
+- Treat detector outputs as experimental signals, not proof that an image is fake or authentic.
+
+## Training and verification commands
+
+Run from the repository root:
+
+Train (use a unique output directory for each new experiment so earlier checkpoints and histories are preserved):
 
 ```powershell
-.venv\Scripts\python.exe -B -m experiments.cifake_cnn.training
+.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.training --output-dir research/experiments/cifake_cnn/outputs/<run-name>
 ```
 
-Flags:
-
-| Flag | Default | Purpose |
-|---|---|---|
-| `--image-size` | `64` | Square training input size |
-| `--batch-size` | `64` | Training batch size |
-| `--epochs` | `20` | Maximum epochs |
-| `--device` | auto | `cuda` or `cpu` |
-| `--seed` | `42` | Random seed |
-| `--output-dir` | `research/experiments/cifake_cnn/outputs` | Output directory |
-
-How it works (`training.py`):
-
-- Uses the existing `CifakeCNN` and the existing reproducible train/val split
-  (`make_train_val_split`) — no duplicated logic.
-- Loss: `BCEWithLogitsLoss` (the model returns raw logits).
-- Optimizer: `AdamW` with the configured `LEARNING_RATE` and `WEIGHT_DECAY`.
-- Tracks train + val loss and accuracy every epoch.
-- Saves the best-epoch checkpoint by val loss (model state, optimizer state,
-  epoch, `val_loss`/`val_accuracy`, `best_val_loss`).
-- Early stopping using `EARLY_STOPPING_PATIENCE` from `config.py`.
-
-Outputs (isolated under `research/experiments/cifake_cnn/outputs/` by default):
-
-- `checkpoints/best_cifake_cnn.pt` — best-epoch checkpoint.
-- `history.csv` — per-epoch rows (append-only; earlier epochs are preserved).
-
-Unit tests (small synthetic models/datasets only — no full CIFAKE training):
+Run focused experiment tests:
 
 ```powershell
-.venv\Scripts\python.exe -B -m pytest experiments\cifake_cnn\test_training.py -q
+.venv\Scripts\python.exe -B -m pytest research\experiments\cifake_cnn -q
 ```
 
-Note: the official CIFAKE `test/` directory is never used for training or validation.
+Evaluate a checkpoint on the official CIFAKE test split only when the experiment is ready for final benchmark comparison:
 
-## GenImage — held out
+```powershell
+.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.evaluate --checkpoint <checkpoint-path> --output <report-path>
+```
 
-`data/genimage_validation_sample/` (8 generator dirs: ADM, BigGAN, glide,
-Midjourney, stable_diffusion_v_1_4, stable_diffusion_v_1_5, VQDM, wukong;
-manifest: 200 `ai` + 200 `nature`) is **separate from this experiment** and
-**must remain held out for generalisation evaluation only** (Stage 4).
+The local research environment may be CPU-only. The full CIFAKE training run used a Colab T4 GPU. Select a GPU runtime for substantial training runs.
 
-## Relationship to the original TruthLens application
+## Experiment files
 
-Nothing under `src/` is modified; this package is additive and independent of
-the production image detector.
+- `config.py` — image sizes and training hyperparameters.
+- `model.py` — `CifakeCNN`, parameter counting and shape test.
+- `dataset.py` — CIFAKE loading, label remapping and reproducible split.
+- `training.py` — training/validation loops, checkpointing, early stopping and history.
+- `evaluate.py` — official CIFAKE test evaluation and JSON report.
+- `analysis.py` — training-history analysis.
+- `test_*.py` — focused tests using synthetic data; they do not run full CIFAKE training.
 
-## Files
+## References and provenance
 
-- `config.py` — hyperparameters (batch 64, lr 3e-4, wd 0.01, 20 epochs, seed 42, ...).
-- `model.py` — `CifakeCNN`, `count_parameters`, `run_shape_test`.
-- `dataset.py` — CIFAKE loading, label remapping, 90/10 split, verification helpers.
-- `training.py` — training pipeline: loaders, train/eval epochs, AdamW + BCEWithLogitsLoss,
-  early stopping, best-checkpoint saving, history CSV, `main()` entry point.
-- `test_training.py` — unit tests for the training utilities (small synthetic models/datasets).
-- `__init__.py` — package marker.
-
-## Verification results (from implementation time)
-
-- Shape test at 32×32: output `(4, 1)` ✅
-- Shape test at 64×64: output `(4, 1)` ✅
-- Parameter count: **889,633** ✅
-- Label mapping: `FAKE=1`, `REAL=0` — verified on all 30,000 train/test files ✅
-- Split: 90,000 train / 10,000 val with seed 42, disjoint and reproducible ✅
-  (first val indices: `3813, 99183, 80737, 65674, 53670`)
+CIFAKE contains REAL images derived from CIFAR-10 and FAKE images generated using Stable Diffusion 1.4. See `research/dataset-metadata.json` for recorded dataset metadata and the dataset publication details. Preserve the dataset's required attribution when publishing results.
