@@ -4,6 +4,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import torch
+from PIL import Image
 
 from research.experiments.cifake_cnn import dataset as dataset_module
 from research.experiments.cifake_cnn.config import NEGATIVE_CLASS, POSITIVE_CLASS
@@ -176,6 +178,113 @@ def test_transform_produces_expected_image_size():
     transformed = transform(image)
 
     assert tuple(transformed.shape) == (3, 32, 32)
+
+
+def make_pil_fake_dataset(real_count=4, fake_count=4, size=(100, 80)):
+    """ImageFolder-like dataset whose loader returns a synthetic PIL image."""
+    samples = []
+    for index in range(fake_count):
+        samples.append((f"FAKE/fake_{index}.jpg", 1))
+    for index in range(real_count):
+        samples.append((f"REAL/real_{index}.jpg", 0))
+    image = Image.new("RGB", size)
+
+    def loader(path):
+        return image.copy()
+
+    dataset = FakeDataset(samples)
+    dataset.loader = loader
+    return dataset, image
+
+
+def test_transformed_subset_independent_transforms():
+    dataset, _ = make_pil_fake_dataset()
+    train_transform = dataset_module._train_transform(32, "jpeg")
+    val_transform = dataset_module._deterministic_transform(32)
+
+    train_view = dataset_module.TransformedSubset(dataset, [0, 1], train_transform)
+    val_view = dataset_module.TransformedSubset(dataset, [2, 3], val_transform)
+
+    assert train_view.transform is not val_view.transform
+    assert train_view.transform.transforms is not val_view.transform.transforms
+
+
+def test_validation_transform_is_deterministic():
+    transform = dataset_module._deterministic_transform(32)
+    image = Image.new("RGB", (100, 80))
+
+    first = transform(image)
+    second = transform(image)
+
+    assert torch.equal(first, second)
+
+
+def test_jpeg_augmentation_only_in_training_transform():
+    train_none = dataset_module._train_transform(32, "none")
+    train_jpeg = dataset_module._train_transform(32, "jpeg")
+    val_transform = dataset_module._deterministic_transform(32)
+
+    assert not any(
+        isinstance(item, dataset_module.RandomJPEGCompression)
+        for item in train_none.transforms
+    )
+    assert any(
+        isinstance(item, dataset_module.RandomJPEGCompression)
+        for item in train_jpeg.transforms
+    )
+    assert not any(
+        isinstance(item, dataset_module.RandomJPEGCompression)
+        for item in val_transform.transforms
+    )
+
+
+def test_transformed_subset_shapes_and_labels():
+    dataset, _ = make_pil_fake_dataset(real_count=4, fake_count=4)
+    transform = dataset_module._deterministic_transform(32)
+    view = dataset_module.TransformedSubset(dataset, [0, 1, 2, 3], transform)
+
+    image, label = view[0]
+
+    assert tuple(image.shape) == (3, 32, 32)
+    assert isinstance(label, int)
+    assert label == dataset.samples[0][1]
+
+
+def test_random_jpeg_compression_probability_zero_returns_input():
+    transform = dataset_module.RandomJPEGCompression(p=0.0)
+    image = Image.new("RGB", (50, 40))
+
+    output = transform(image)
+
+    assert output is image
+
+
+def test_random_jpeg_compression_probability_one_returns_rgb_image():
+    transform = dataset_module.RandomJPEGCompression(p=1.0, quality_range=(50, 50))
+    image = Image.new("RGB", (50, 40))
+
+    output = transform(image)
+
+    assert isinstance(output, Image.Image)
+    assert output.mode == "RGB"
+
+
+def test_random_jpeg_compression_invalid_parameters_raise():
+    with pytest.raises(ValueError):
+        dataset_module.RandomJPEGCompression(p=1.5)
+    with pytest.raises(ValueError):
+        dataset_module.RandomJPEGCompression(quality_range=(10, 5))
+    with pytest.raises(ValueError):
+        dataset_module.RandomJPEGCompression(quality_range=(0, 50))
+
+
+def test_original_split_remains_reproducible():
+    dataset = make_fake_dataset(real_count=20, fake_count=20)
+
+    first = dataset_module.make_train_val_split(dataset, seed=42, val_fraction=0.2)
+    second = dataset_module.make_train_val_split(dataset, seed=42, val_fraction=0.2)
+
+    assert first == second
 
 
 def test_empty_split_is_rejected():

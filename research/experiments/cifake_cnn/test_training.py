@@ -10,9 +10,11 @@ import unittest
 from pathlib import Path
 
 import torch
+from PIL import Image
 from torch.utils.data import DataLoader
 
 from . import training
+from .dataset import RandomJPEGCompression
 from .model import CifakeCNN
 
 
@@ -21,6 +23,7 @@ class _FakeDataset:
 
     def __init__(self, n=40):
         self.samples = [(f"item_{i}", i % 2) for i in range(n)]
+        self.loader = lambda path: Image.new("RGB", (32, 32))
 
     def __len__(self):
         return len(self.samples)
@@ -184,6 +187,67 @@ class TrainingUtilityTests(unittest.TestCase):
             self.assertGreaterEqual(len(checkpoints), 1)
             with (Path(tmp) / "history.csv").open(newline="") as handle:
                 self.assertEqual(len(list(csv.DictReader(handle))), 2)
+
+
+    def test_make_loaders_independent_transforms(self):
+        dataset = _FakeDataset(40)
+        train_loader, val_loader = training.make_loaders(
+            dataset, batch_size=8, val_fraction=0.25, augmentation="jpeg"
+        )
+        train_view = train_loader.dataset
+        val_view = val_loader.dataset
+
+        self.assertIsNot(train_view.transform, val_view.transform)
+        self.assertTrue(
+            any(isinstance(t, RandomJPEGCompression) for t in train_view.transform.transforms)
+        )
+        self.assertFalse(
+            any(isinstance(t, RandomJPEGCompression) for t in val_view.transform.transforms)
+        )
+
+    def test_make_loaders_none_augmentation_has_no_jpeg(self):
+        dataset = _FakeDataset(40)
+        train_loader, val_loader = training.make_loaders(
+            dataset, batch_size=8, val_fraction=0.25, augmentation="none"
+        )
+        train_view = train_loader.dataset
+        self.assertFalse(
+            any(isinstance(t, RandomJPEGCompression) for t in train_view.transform.transforms)
+        )
+
+    def test_make_loaders_uses_requested_image_size(self):
+        dataset = _FakeDataset(8)
+        train_loader, _ = training.make_loaders(
+            dataset, batch_size=4, val_fraction=0.25, image_size=16
+        )
+        x, _ = next(iter(train_loader))
+        self.assertEqual(tuple(x.shape[1:]), (3, 16, 16))
+
+    def test_validate_output_dir_refuses_existing_results(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            out.mkdir()
+            (out / "history.csv").write_text("epoch\n0\n")
+            with self.assertRaises(training.OutputDirectoryError):
+                training.validate_output_dir(out, overwrite_existing=False)
+
+    def test_validate_output_dir_allows_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            out.mkdir()
+            (out / "history.csv").write_text("epoch\n0\n")
+            training.validate_output_dir(out, overwrite_existing=True)  # no raise
+
+    def test_validate_output_dir_protects_baseline_for_augmented(self):
+        with self.assertRaises(training.OutputDirectoryError):
+            training.validate_output_dir(
+                training.DEFAULT_OUTPUT_DIR, augmentation="jpeg", overwrite_existing=True
+            )
+
+    def test_validate_output_dir_allows_separate_augmented_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "augmentation_jpeg"
+            training.validate_output_dir(out, augmentation="jpeg", overwrite_existing=False)  # no raise
 
 
 if __name__ == "__main__":

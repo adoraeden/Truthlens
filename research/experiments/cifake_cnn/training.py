@@ -37,7 +37,13 @@ from .config import (
     VAL_FRACTION,
     WEIGHT_DECAY,
 )
-from .dataset import make_datasets, make_train_val_split
+from .dataset import (
+    TransformedSubset,
+    _deterministic_transform,
+    _train_transform,
+    make_datasets,
+    make_train_val_split,
+)
 from .model import CifakeCNN
 
 # --- Output locations (configurable via arguments) ---
@@ -61,17 +67,20 @@ def select_device():
 
 
 def make_loaders(dataset, seed=RANDOM_SEED, val_fraction=VAL_FRACTION,
-                 batch_size=BATCH_SIZE, shuffle_train=True):
+                 batch_size=BATCH_SIZE, shuffle_train=True, augmentation="none",
+                 image_size=IMAGE_SIZE_MAIN):
     """Build train/validation DataLoaders via the existing reproducible split.
 
-    Uses ``make_train_val_split`` from ``dataset.py``; the caller's ``dataset``
-    is split into disjoint ``Subset``s (train + val). Returns
-    ``(train_loader, val_loader)``.
+    Training and validation views use *independent* transforms: validation
+    keeps the deterministic preprocessing (Resize/ToTensor/Normalize), training
+    optionally adds JPEG compression augmentation when ``augmentation=="jpeg"``.
     """
     train_indices, val_indices = make_train_val_split(
         dataset, seed=seed, val_fraction=val_fraction)
-    train_ds = Subset(dataset, train_indices)
-    val_ds = Subset(dataset, val_indices)
+    train_transform = _train_transform(image_size, augmentation)
+    val_transform = _deterministic_transform(image_size)
+    train_ds = TransformedSubset(dataset, train_indices, train_transform)
+    val_ds = TransformedSubset(dataset, val_indices, val_transform)
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=shuffle_train, num_workers=0)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=0)
     return train_loader, val_loader
@@ -142,7 +151,8 @@ class EarlyStopping:
 
 
 def save_checkpoint(model, optimizer, epoch, val_loss, val_accuracy, path,
-                    train_loss=None, train_accuracy=None, seed=None, output_dir=None):
+                    train_loss=None, train_accuracy=None, seed=None, output_dir=None,
+                    augmentation=None):
     """Save a best-epoch checkpoint (model, optimizer, epoch, metadata).
 
     Backward compatible with earlier callers: the extra arguments are optional
@@ -157,11 +167,12 @@ def save_checkpoint(model, optimizer, epoch, val_loss, val_accuracy, path,
         "val_loss": float(val_loss),
         "val_accuracy": float(val_accuracy),
         "best_val_loss": float(val_loss),
-        # --- metadata (added in the restoration stage) ---
+        # --- metadata ---
         "train_loss": float(train_loss) if train_loss is not None else None,
         "train_accuracy": float(train_accuracy) if train_accuracy is not None else None,
         "seed": int(seed) if seed is not None else None,
         "output_dir": str(output_dir) if output_dir is not None else None,
+        "augmentation": augmentation,
     }
     torch.save(checkpoint, path)
     return path
@@ -196,6 +207,7 @@ def load_checkpoint(path, model=None, optimizer=None, device=None):
         "seed": checkpoint.get("seed"),
         "output_dir": checkpoint.get("output_dir"),
         "best_val_loss": checkpoint.get("best_val_loss"),
+        "augmentation": checkpoint.get("augmentation"),
     }
 
 
@@ -214,7 +226,8 @@ def append_history_row(history_file, row):
 def run_training(model, train_loader, val_loader, device,
                  epochs=MAX_EPOCHS, patience=EARLY_STOPPING_PATIENCE,
                  seed=RANDOM_SEED, checkpoint_dir=DEFAULT_CHECKPOINT_DIR,
-                 history_file=DEFAULT_HISTORY_FILE, verbose=True):
+                 history_file=DEFAULT_HISTORY_FILE, verbose=True,
+                 augmentation="none"):
     """Run the full training loop and return the history rows.
 
     - Uses ``BCEWithLogitsLoss`` (model outputs raw logits).
@@ -222,6 +235,7 @@ def run_training(model, train_loader, val_loader, device,
     - Tracks train/val loss and accuracy per epoch; appends to ``history_file``.
     - Saves the best checkpoint (by val loss) to ``checkpoint_dir``.
     - Early stopping with ``patience`` (from config when not overridden).
+    - ``augmentation`` is recorded in checkpoint metadata.
     """
     set_seed(seed)
     model.to(device)
@@ -251,6 +265,7 @@ def run_training(model, train_loader, val_loader, device,
                 model, optimizer, epoch, val_loss, val_accuracy, best_checkpoint_path,
                 train_loss=train_loss, train_accuracy=train_accuracy,
                 seed=seed, output_dir=checkpoint_dir.parent,
+                augmentation=augmentation,
             )
             if verbose:
                 print(f"epoch {epoch}: new best val_loss={val_loss:.4f} -> {best_checkpoint_path}")
@@ -266,6 +281,39 @@ def run_training(model, train_loader, val_loader, device,
     return history
 
 
+class OutputDirectoryError(RuntimeError):
+    """Raised when a training run would overwrite or clobber existing results."""
+
+
+def has_existing_results(output_dir):
+    """Return True if ``output_dir`` already contains a checkpoint or history."""
+    output_dir = Path(output_dir)
+    checkpoint = output_dir / "checkpoints" / BEST_CHECKPOINT_NAME
+    history = output_dir / "history.csv"
+    return checkpoint.is_file() or history.is_file()
+
+
+def validate_output_dir(output_dir, augmentation="none", overwrite_existing=False):
+    """Guard against overwriting existing experiment results.
+
+    - Baseline (``outputs/``) is protected: an augmented run may not write
+      into it.
+    - If the directory already contains a checkpoint or history.csv, training
+      refuses to start unless ``overwrite_existing`` is True.
+    """
+    output_dir = Path(output_dir)
+    if augmentation != "none" and output_dir.resolve() == DEFAULT_OUTPUT_DIR.resolve():
+        raise OutputDirectoryError(
+            "refusing to write augmented experiment results into the baseline "
+            "output directory; use a separate --output-dir"
+        )
+    if has_existing_results(output_dir) and not overwrite_existing:
+        raise OutputDirectoryError(
+            f"output directory already contains experiment results: {output_dir}; "
+            "use --overwrite-existing to overwrite intentionally"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train the from-scratch CIFAKE CNN.")
     parser.add_argument("--image-size", type=int, default=IMAGE_SIZE_MAIN,
@@ -278,8 +326,13 @@ def main():
                         help="'cuda' or 'cpu'; default: auto-select")
     parser.add_argument("--seed", type=int, default=RANDOM_SEED,
                         help="Random seed (default: RANDOM_SEED)")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
-                        help=f"Output directory for checkpoints/history (default: {DEFAULT_OUTPUT_DIR})")
+    parser.add_argument("--augmentation", choices=["none", "jpeg"], default="none",
+                        help="Training-only augmentation (default: none)")
+    parser.add_argument("--overwrite-existing", action="store_true",
+                        help="Allow overwriting an existing checkpoint/history in the output directory")
+    parser.add_argument("--output-dir", type=Path, default=None,
+                        help="Output directory (default: outputs/ for none, "
+                             "outputs/augmentation_<mode>/ otherwise)")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -287,16 +340,30 @@ def main():
 
     train_ds, _test_ds = make_datasets(image_size=args.image_size)
     model = CifakeCNN(input_size=args.image_size)
-    train_loader, val_loader = make_loaders(train_ds, batch_size=args.batch_size)
+    train_loader, val_loader = make_loaders(
+        train_ds, batch_size=args.batch_size, augmentation=args.augmentation,
+        image_size=args.image_size)
+
+    if args.output_dir is None:
+        if args.augmentation == "none":
+            output_dir = DEFAULT_OUTPUT_DIR
+        else:
+            output_dir = DEFAULT_OUTPUT_DIR / f"augmentation_{args.augmentation}"
+    else:
+        output_dir = args.output_dir
+
+    validate_output_dir(output_dir, augmentation=args.augmentation,
+                        overwrite_existing=args.overwrite_existing)
 
     history = run_training(
         model, train_loader, val_loader, device,
         epochs=args.epochs,
         seed=args.seed,
-        checkpoint_dir=args.output_dir / "checkpoints",
-        history_file=args.output_dir / "history.csv",
+        checkpoint_dir=output_dir / "checkpoints",
+        history_file=output_dir / "history.csv",
+        augmentation=args.augmentation,
     )
-    print(f"outputs: {args.output_dir}")
+    print(f"outputs: {output_dir}")
     if history:
         print(f"best val_loss: {min(row['val_loss'] for row in history):.4f}")
 

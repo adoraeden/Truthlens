@@ -9,10 +9,13 @@ Label convention (explicit, not the alphabetical default):
     REAL = 0
 """
 
+import io
 import random
 from collections import Counter
 from pathlib import Path
 
+from PIL import Image
+from torch.utils.data import Dataset
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 
@@ -27,13 +30,105 @@ from .config import (
 CIFAKE_ROOT = Path(__file__).resolve().parents[2] / "data" / "kaggle_image"
 
 
-def _transform(image_size):
-    """Resize to a square, convert to tensor, and normalize with ImageNet stats."""
+class RandomJPEGCompression:
+    """PIL-based random JPEG compression augmentation.
+
+    Applies JPEG compression with probability ``p`` using a uniformly sampled
+    quality in ``quality_range``. Operates on a PIL image and returns a PIL
+    image, so it must be placed *before* ``Resize`` / ``ToTensor`` in a
+    transform pipeline. Intended for the training view only.
+    """
+
+    def __init__(self, p=0.5, quality_range=(30, 90)):
+        if not 0.0 <= p <= 1.0:
+            raise ValueError("p must be in [0, 1]")
+        lo, hi = quality_range
+        if not (1 <= lo <= 100 and 1 <= hi <= 100 and lo <= hi):
+            raise ValueError(
+                "quality_range must be (lo, hi) with 1 <= lo <= hi <= 100"
+            )
+        self.p = p
+        self.quality_min = lo
+        self.quality_max = hi
+
+    def __call__(self, image):
+        if random.random() >= self.p:
+            return image
+        quality = random.randint(self.quality_min, self.quality_max)
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="JPEG", quality=quality)
+        buffer.seek(0)
+        compressed = Image.open(buffer).convert("RGB")
+        buffer.close()
+        return compressed
+
+    def __repr__(self):
+        return (f"RandomJPEGCompression(p={self.p}, "
+                f"quality_range=({self.quality_min}, {self.quality_max}))")
+
+
+def _deterministic_transform(image_size):
+    """Deterministic preprocessing: Resize, ToTensor, ImageNet normalization.
+
+    Used for validation and the official test set (unchanged).
+    """
     return Compose([
         Resize((image_size, image_size)),
         ToTensor(),
         Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
+
+
+# Backward-compatible alias (existing tests reference ``_transform``).
+_transform = _deterministic_transform
+
+
+def _train_transform(image_size, augmentation="none"):
+    """Training preprocessing: optional JPEG augmentation before deterministic steps."""
+    steps = []
+    if augmentation == "jpeg":
+        steps.append(RandomJPEGCompression())
+    steps += [
+        Resize((image_size, image_size)),
+        ToTensor(),
+        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+    return Compose(steps)
+
+
+class TransformedSubset(Dataset):
+    """A subset of a base dataset with an *independent* transform.
+
+    Unlike ``torch.utils.data.Subset``, this view owns its own transform, so
+    training and validation preprocessing cannot accidentally share (and
+    mutate) a single transform object.
+    """
+
+    def __init__(self, base, indices, transform, loader=None):
+        self.base = base
+        self.indices = list(indices)
+        self.transform = transform
+        if loader is not None:
+            self.loader = loader
+        elif getattr(base, "loader", None) is not None:
+            self.loader = base.loader
+        else:
+            self.loader = _default_image_loader
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, index):
+        path, target = self.base.samples[self.indices[index]]
+        image = self.loader(path)
+        if self.transform is not None:
+            image = self.transform(image)
+        return image, target
+
+
+def _default_image_loader(path):
+    with open(path, "rb") as handle:
+        return Image.open(handle).convert("RGB")
 
 
 def make_datasets(image_size=IMAGE_SIZE_MAIN):
