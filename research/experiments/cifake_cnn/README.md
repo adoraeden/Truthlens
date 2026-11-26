@@ -35,7 +35,9 @@ Output  : [B, 1] raw logits (no sigmoid inside the model)
 
 ## Completed work
 
-### Phase 1 — Foundation and data pipeline <badge status="complete">Complete</badge>
+### Phase 1 — Foundation and data pipeline
+
+**Status: Complete**
 
 - Implemented the custom CNN architecture from random initialisation.
 - Implemented CIFAKE loading and explicit `FAKE=1` / `REAL=0` label mapping.
@@ -43,7 +45,9 @@ Output  : [B, 1] raw logits (no sigmoid inside the model)
 - Verified that training and validation indices are disjoint and cover the training directory.
 - Added focused tests for the model and dataset utilities.
 
-### Phase 2 — Training pipeline and CIFAKE baseline <badge status="complete">Complete</badge>
+### Phase 2 — Training pipeline and CIFAKE baseline
+
+**Status: Complete**
 
 - Implemented training and validation loops using `BCEWithLogitsLoss` and AdamW.
 - Added deterministic seeding, early stopping, best-validation-loss checkpointing and append-only CSV training history.
@@ -94,7 +98,9 @@ The model predicted FAKE for 373 of the 400 images and correctly classified only
 
 ## Research roadmap
 
-### Phase 3 — Generalisation and cross-generator performance <badge status="active">Active</badge>
+### Phase 3 — Generalisation and cross-generator performance
+
+**Status: Active — current phase**
 
 **Objective:** understand and improve performance on data that differs from CIFAKE, while keeping comparisons fair and avoiding evaluation leakage.
 
@@ -128,21 +134,27 @@ The model predicted FAKE for 373 of the 400 images and correctly classified only
 
 **Phase 3 success criterion:** demonstrate a repeatable improvement in external-data performance without hiding class-specific failures or materially sacrificing the CIFAKE benchmark. If an experiment does not improve generalisation, document that result rather than presenting it as a success.
 
-### Phase 4 — Real-world image robustness <badge status="planned">Planned</badge>
+### Phase 4 — Real-world image robustness
+
+**Status: Planned**
 
 - Evaluate controlled JPEG compression levels, resizing, blur, noise, crops and screenshot-like transformations.
 - Measure performance degradation as transformation severity increases.
 - Distinguish robustness to image processing from generalisation to new generators.
 - Keep transformed evaluation copies separate from training unless a specific robustness-training experiment is being tested.
 
-### Phase 5 — Explainability and feature investigation <badge status="planned">Planned</badge>
+### Phase 5 — Explainability and feature investigation
+
+**Status: Planned**
 
 - Explore Grad-CAM or related attribution methods to visualise regions influencing predictions.
 - Inspect feature maps and compare correct predictions with false positives and false negatives.
 - Investigate spatial and frequency-domain signals as separate evidence sources.
 - Check whether explanations are stable and meaningful; visual heatmaps are diagnostic aids, not proof of manipulation.
 
-### Phase 6 — Advanced model research <badge status="planned">Planned</badge>
+### Phase 6 — Advanced model research
+
+**Status: Planned**
 
 - Compare carefully selected CNN architecture variants.
 - Investigate spatial/frequency feature fusion and alternative classification heads.
@@ -164,7 +176,7 @@ The model predicted FAKE for 373 of the 400 images and correctly classified only
 
 Run from the repository root:
 
-Train (use a unique output directory for each new experiment so earlier checkpoints and histories are preserved):
+The current runner reproduces the existing training recipe. A unique output directory keeps earlier checkpoints and histories preserved:
 
 ```powershell
 .venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.training --output-dir research/experiments/cifake_cnn/outputs/<run-name>
@@ -176,7 +188,7 @@ Run focused experiment tests:
 .venv\Scripts\python.exe -B -m pytest research\experiments\cifake_cnn -q
 ```
 
-Evaluate a checkpoint on the official CIFAKE test split only when the experiment is ready for final benchmark comparison:
+Evaluate the selected checkpoint on the official CIFAKE test split only when the experiment is ready for a final benchmark comparison. Adjust the two paths to match the run being evaluated:
 
 ```powershell
 .venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.evaluate --checkpoint <checkpoint-path> --output <report-path>
