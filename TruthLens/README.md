@@ -244,7 +244,7 @@ Activate it on Windows PowerShell:
 Install backend dependencies:
 
 ```powershell
-pip install -r requirements.txt
+pip install -r TruthLens/requirements.txt
 ```
 
 Start the FastAPI backend:
@@ -253,6 +253,7 @@ Start the FastAPI backend:
 $env:TRUTHLENS_IMAGE_LOGIT_THRESHOLD = "0.0"
 $env:TRUTHLENS_PELLA_MIN_RAM_GB = "3.5"
 
+Set-Location TruthLens
 python -m uvicorn src.api_server:app --host 127.0.0.1 --port 8002
 ```
 
@@ -278,13 +279,13 @@ export TRUTHLENS_PELLA_MIN_RAM_GB=3.5
 Open a new terminal:
 
 ```powershell
-Set-Location 'C:\Users\adora\DeepfakeLab\frontend'
+Set-Location 'C:\Users\adora\DeepfakeLab\TruthLens\frontend'
 ```
 
 Install frontend dependencies:
 
 ```powershell
-npm install
+npm ci
 ```
 
 Start the Vite development server:
@@ -330,15 +331,15 @@ TruthLens includes backend and frontend tests to verify important application be
 
 ### Backend Tests
 
-Run from the repository root:
+Run these commands from the `TruthLens/` directory:
 
 ```powershell
-pytest tests/test_api_endpoints.py tests/test_detectors.py
+python -m pytest -q
 ```
 
 ### Frontend TypeScript Check
 
-Run inside the frontend directory:
+Run these commands from `TruthLens/frontend/`:
 
 ```powershell
 npm run lint
