@@ -44,3 +44,26 @@ jobs:
 
       - name: Run PRISM CIFAKE experiment tests
         run: python -m pytest -q research/experiments/cifake_cnn
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: TruthLens/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: TruthLens/frontend
+        run: npm ci
+
+      - name: Check frontend types
+        working-directory: TruthLens/frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: TruthLens/frontend
+        run: npm run build
+
+      - name: Run frontend tests
+        working-directory: TruthLens/frontend
+        run: node --import tsx --test tests/*.test.ts
