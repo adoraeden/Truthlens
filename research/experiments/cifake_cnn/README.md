@@ -1,211 +1,171 @@
-# PRISM — CIFAKE CNN Experiment (from-scratch training)
+# PRISM — CIFAKE CNN Experiment
 
-**Current status:** Phases 1–2 are complete. Phase 3 (generalisation) is the active research phase. The roadmap below distinguishes completed work from planned experiments.
+## What is this?
 
-## Purpose
+This project explores whether a custom CNN (convolutional neural network) can distinguish AI-generated images from real images.
 
-Train and study a custom CNN **from random initialisation** on the CIFAKE dataset to classify AI-generated (`FAKE`) vs. genuine (`REAL`) images. The goal is to understand CNN training end-to-end — data → model → loss → gradients → checkpoints — and, most importantly, investigate whether learned image features generalise beyond the dataset used for training.
+We built the CNN ourselves rather than starting with a pretrained model. The experiment is separate from the production TruthLens detector.
 
-## Why a CNN from scratch?
+Our main goal is not just to get a high score on one dataset. We want to understand whether the model can also work on images from generators and sources it has not seen before.
 
-- The original TruthLens application uses a pretrained ViT image detector (see `TruthLens/src/image_detector.py`). This experiment is intentionally independent: it uses our own architecture and random initialisation.
-- CIFAKE is a balanced benchmark: 50,000 real and 50,000 fake images in `train/`, and 10,000 of each class in `test/` (see `research/data/kaggle_image/`).
-- The experiment is additive and does not modify the production TruthLens detector.
+## Current results
 
-## Dataset and label mapping
+We trained the CNN on CIFAKE using a Google Colab NVIDIA T4 GPU.
 
-- Root: `research/data/kaggle_image/` (download locally; dataset files are git-ignored).
-- **Mapping: `FAKE = 1` (positive class), `REAL = 0`.** `dataset.py` remaps ImageFolder's alphabetical assignment so this convention is explicit.
-- `research/data/kaggle_image/train/` is used for training and validation.
-- `research/data/kaggle_image/test/` is the official test set and must remain separate from training and model-selection decisions.
-
-## Baseline architecture
-
-```
-Input   : [B, 3, H, W] (32 or 64, RGB)
-Stages  : 5 convolutional stages, widths 3 -> 32 -> 64 -> 96 -> 128 -> 160
-          Each stage:
-            Conv2d(in, w, k=3, s=2, p=1) -> BatchNorm2d(w) -> ReLU
-            Conv2d(w, w, k=3, s=1, p=1)  -> BatchNorm2d(w) -> ReLU
-Head    : AdaptiveAvgPool2d(1) -> Flatten -> Linear(160, 64) -> ReLU -> Linear(64, 1)
-Output  : [B, 1] raw logits (no sigmoid inside the model)
-```
-
-**Trainable parameters: 889,633.** The architecture was shape-tested at 32×32 and 64×64.
-
-## Completed work
-
-### Phase 1 — Foundation and data pipeline
-
-**Status: Complete**
-
-- Implemented the custom CNN architecture from random initialisation.
-- Implemented CIFAKE loading and explicit `FAKE=1` / `REAL=0` label mapping.
-- Implemented reproducible, stratified 90/10 training/validation splitting with seed 42.
-- Verified that training and validation indices are disjoint and cover the training directory.
-- Added focused tests for the model and dataset utilities.
-
-### Phase 2 — Training pipeline and CIFAKE baseline
-
-**Status: Complete**
-
-- Implemented training and validation loops using `BCEWithLogitsLoss` and AdamW.
-- Added deterministic seeding, early stopping, best-validation-loss checkpointing and append-only CSV training history.
-- Trained on a Google Colab NVIDIA Tesla T4 at 64×64 resolution, batch size 64, with a maximum of 20 epochs and early-stopping patience of 5.
-- Training stopped after 12 epochs; the best checkpoint was selected at epoch 6.
-
-**Recorded CIFAKE results**
-
-| Evaluation | Accuracy | Precision | Recall | F1 |
-|---|---:|---:|---:|---:|
-| Best validation checkpoint | 95.63% | — | — | — |
-| Official CIFAKE test (20,000 images) | 95.67% | 95.89% | 95.43% | 95.66% |
-
-Official-test confusion matrix (rows = actual REAL/FAKE, columns = predicted REAL/FAKE):
-
-```
-                 Predicted
-                 REAL   FAKE
-Actual REAL      9591    409
-Actual FAKE       457   9543
-```
-
-These are benchmark results on CIFAKE. They do not establish performance on unfamiliar generators or real-world media.
-
-## Initial cross-dataset diagnostic
-
-An exploratory evaluation was previously run on a **400-image GenImage sample** containing 200 AI-generated and 200 real/nature images drawn across eight generator folders.
-
-| Metric | Recorded result |
+| Result | Score |
 |---|---:|
-| Accuracy | 49.25% |
-| Precision (FAKE positive) | 49.6% |
-| Recall (FAKE positive) | 92.5% |
-| F1 (FAKE positive) | 64.57% |
+| CIFAKE validation accuracy | **95.63%** |
+| CIFAKE official test accuracy | **95.67%** |
+| CIFAKE test F1 score | **95.66%** |
 
-Confusion matrix (rows = actual REAL/FAKE, columns = predicted REAL/FAKE):
+The official CIFAKE test contains 20,000 images. These results are good for this dataset, but they do not prove that the model works equally well on images from other sources.
 
-```
-                 Predicted
-                 REAL   FAKE
-Actual REAL        12    188
-Actual FAKE        15    185
-```
+### Our generalisation problem
 
-The model predicted FAKE for 373 of the 400 images and correctly classified only 12 of the 200 real images. This indicates a severe false-positive problem on this small sample. The result is a diagnostic warning, not a reliable estimate of general real-world performance.
+We also tried the model on a small, separate sample of 400 GenImage pictures: 200 AI-generated and 200 real.
 
-**Research consequence:** CIFAKE performance is strong, but cross-dataset generalisation is not. We need to investigate dataset and preprocessing differences, model behaviour and source diversity rather than simply chase a higher CIFAKE accuracy.
+| Result | Score |
+|---|---:|
+| Accuracy | **49.25%** |
+| Real images correctly identified | **12 out of 200** |
+| AI-generated images correctly identified | **185 out of 200** |
 
-## Research roadmap
+The model labelled most of the real images as fake. This is a serious false-positive problem and shows that strong CIFAKE results do not automatically transfer to other datasets.
 
-### Phase 3 — Generalisation and cross-generator performance
+This 400-image sample is now a **diagnostic reference**. We should not keep adjusting the model against the same sample. We need separate development data and an independent final evaluation.
 
-**Status: Active — current phase**
+---
 
-**Objective:** understand and improve performance on data that differs from CIFAKE, while keeping comparisons fair and avoiding evaluation leakage.
+# Project Roadmap
 
-1. **3.1 — Data and evaluation audit**
-   - Verify image dimensions, formats, colour channels, class labels and preprocessing across datasets.
-   - Compare content and source distributions for real and generated images.
-   - Inspect prediction scores, confusion matrices and false-positive/false-negative examples by generator.
-   - Record exactly which preprocessing is applied in training and evaluation.
-   - Create a separate development set for experiment selection. The previously inspected 400-image GenImage sample is a reference diagnostic and must not be repeatedly used to tune the model.
+Use the checkboxes to track our progress. Completed work is checked; unchecked items are still to do.
 
-2. **3.2 — Controlled augmentation experiments**
-   - Establish an unchanged baseline run for comparison.
-   - Test spatial augmentation (for example, random resized crops and horizontal flips).
-   - Test image-quality transformations (for example, JPEG compression, resizing, mild blur and controlled noise).
-   - Test moderate colour and appearance variation.
-   - Run ablations one group at a time before testing a combined policy.
-   - Apply stochastic augmentation only to training data; keep validation and evaluation preprocessing deterministic.
+## Phase 1 — Build the CNN
 
-3. **3.3 — Training-source diversity**
-   - Investigate adding suitable images from multiple generator families.
-   - Keep real and generated examples reasonably comparable in content and processing.
-   - Separate training, development and final evaluation by source or generator where possible.
-   - Record dataset provenance, licences, class balance and generator coverage.
+- [x] Design and implement our own CNN architecture.
+- [x] Set up the CIFAKE dataset loader.
+- [x] Set the labels consistently: REAL = 0 and FAKE = 1.
+- [x] Create a repeatable training and validation split.
+- [x] Add tests for the model and dataset.
 
-4. **3.4 — Independent generalisation evaluation**
-   - Evaluate the selected model on generator families not used for training.
-   - Report accuracy, balanced accuracy, precision, recall, F1, ROC-AUC and confusion matrices.
-   - Break down results by generator and class, not just as one aggregate score.
-   - Compare against the original CIFAKE baseline and report limitations.
-   - Use multiple random seeds for promising configurations where compute permits.
+**Status: Complete**
 
-**Phase 3 success criterion:** demonstrate a repeatable improvement in external-data performance without hiding class-specific failures or materially sacrificing the CIFAKE benchmark. If an experiment does not improve generalisation, document that result rather than presenting it as a success.
+## Phase 2 — Train and test the first model
 
-### Phase 4 — Real-world image robustness
+- [x] Build the training and validation process.
+- [x] Add loss tracking, checkpoint saving and early stopping.
+- [x] Train the CNN on CIFAKE using a GPU.
+- [x] Select the best model using validation results.
+- [x] Evaluate it on the separate official CIFAKE test set.
+- [x] Record the training and evaluation results.
+- [x] Run the focused experiment tests (43 passed).
 
-**Status: Planned**
+**Status: Complete**
 
-- Evaluate controlled JPEG compression levels, resizing, blur, noise, crops and screenshot-like transformations.
-- Measure performance degradation as transformation severity increases.
-- Distinguish robustness to image processing from generalisation to new generators.
-- Keep transformed evaluation copies separate from training unless a specific robustness-training experiment is being tested.
+## Phase 3 — Improve performance on unfamiliar images
 
-### Phase 5 — Explainability and feature investigation
+**This is our current phase.** We want the CNN to work better on images from sources and AI generators that were not part of its original training.
 
-**Status: Planned**
+### 3.1 Understand the problem
 
-- Explore Grad-CAM or related attribution methods to visualise regions influencing predictions.
-- Inspect feature maps and compare correct predictions with false positives and false negatives.
-- Investigate spatial and frequency-domain signals as separate evidence sources.
-- Check whether explanations are stable and meaningful; visual heatmaps are diagnostic aids, not proof of manipulation.
+- [ ] Compare image sizes, formats and colour information across datasets.
+- [ ] Check that labels and image preprocessing are consistent.
+- [ ] Study the model's predictions and confidence scores.
+- [ ] Inspect examples that were incorrectly labelled as fake or real.
+- [ ] Compare results across different AI generators.
+- [ ] Prepare separate development data for choosing improvements.
 
-### Phase 6 — Advanced model research
+### 3.2 Try better training techniques
 
-**Status: Planned**
+- [ ] Create a fresh run of the original model as a comparison baseline.
+- [ ] Try random crops and horizontal flips.
+- [ ] Try resizing and JPEG compression.
+- [ ] Try mild blur and image noise.
+- [ ] Try small brightness, contrast and colour changes.
+- [ ] Test each change separately before combining useful ones.
 
-- Compare carefully selected CNN architecture variants.
-- Investigate spatial/frequency feature fusion and alternative classification heads.
-- Study calibration and uncertainty so that weak or unfamiliar inputs are not presented with unjustified confidence.
-- Consider ensembles only if independent evaluation shows a meaningful benefit.
-- Keep experimental models isolated from the production TruthLens detector until they have passed appropriate evaluation.
+### 3.3 Use more varied training images
 
-## Research and reproducibility rules
+- [ ] Find suitable real and AI-generated images from additional sources.
+- [ ] Include images from different AI generator families.
+- [ ] Keep the real and generated image collections reasonably comparable.
+- [ ] Record the source, licence and number of images used.
+- [ ] Keep final evaluation sources separate from training data.
 
-- Do not train on the official CIFAKE test set.
-- Do not repeatedly tune against the previously inspected 400-image GenImage diagnostic sample; use a separate development set and preserve an independent final evaluation set.
-- Change one major factor at a time during ablation experiments.
-- Record configuration, seed, dataset version, preprocessing, checkpoint and metrics for every run.
-- Compare models on the same evaluation examples and report per-class results.
-- Keep model checkpoints, datasets and large generated artifacts out of Git unless there is a specific, appropriate reason to version them.
-- Treat detector outputs as experimental signals, not proof that an image is fake or authentic.
+### 3.4 Check whether the improvements really work
 
-## Training and verification commands
+- [ ] Evaluate on sources not used for training or model selection.
+- [ ] Compare the new model with the original CIFAKE baseline.
+- [ ] Report accuracy, precision, recall, F1 and balanced accuracy.
+- [ ] Check false positives and false negatives for each source.
+- [ ] Repeat promising experiments with more than one random seed.
+- [ ] Document improvements, regressions and limitations.
 
-Run from the repository root:
+**Phase 3 goal:** improve performance on unfamiliar images without hiding mistakes or relying on CIFAKE accuracy alone.
 
-The current runner reproduces the existing training recipe. A unique output directory keeps earlier checkpoints and histories preserved:
+## Phase 4 — Test real-world image quality changes
 
-```powershell
-.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.training --output-dir research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction
-```
+- [ ] Test JPEG compression at different quality levels.
+- [ ] Test resized and blurry images.
+- [ ] Test noisy images and screenshots.
+- [ ] Test cropped images.
+- [ ] Measure how each change affects the results.
 
-Run focused experiment tests:
+## Phase 5 — Help us understand the model's decisions
+
+- [ ] Add Grad-CAM or a similar visualisation to highlight influential image regions.
+- [ ] Inspect what the model focuses on when it is correct.
+- [ ] Inspect what it focuses on when it makes mistakes.
+- [ ] Explore image-frequency patterns.
+- [ ] Check whether visual explanations are stable and useful.
+
+## Phase 6 — Explore more advanced models
+
+- [ ] Compare other CNN architectures.
+- [ ] Experiment with combining image and frequency features.
+- [ ] Explore confidence calibration and uncertainty.
+- [ ] Test whether an ensemble of models provides a real improvement.
+- [ ] Only consider connecting a research model to TruthLens after proper evaluation.
+
+---
+
+## Important experiment rules
+
+- Never train on the official CIFAKE test set.
+- Keep training, validation and final evaluation data separate.
+- Do not repeatedly tune against the previously inspected 400-image GenImage sample.
+- Change one major training setting at a time so we can understand what helped.
+- Save each experiment's settings, results and model checkpoint separately.
+- Keep this research experiment separate from TruthLens's production detector.
+- A model prediction is an indication, not proof that an image is real or fake.
+
+## Project files
+
+- `model.py` — our CNN architecture.
+- `dataset.py` — dataset loading and splitting.
+- `training.py` — model training.
+- `evaluate.py` — evaluation on the official CIFAKE test set.
+- `analysis.py` — training-history analysis.
+- `test_*.py` — automated tests.
+
+## Running the experiment
+
+Run commands from the repository root.
+
+Run the focused tests:
 
 ```powershell
 .venv\Scripts\python.exe -B -m pytest research\experiments\cifake_cnn -q
 ```
 
-Evaluate the selected checkpoint on the official CIFAKE test split only when the experiment is ready for a final benchmark comparison. Adjust the two paths to match the run being evaluated:
+The existing training script can reproduce the original training setup. Give every new run its own output folder so previous results are preserved:
 
 ```powershell
-.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.evaluate --checkpoint research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction/checkpoints/best_cifake_cnn.pt --output research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction/official_test_results.json
+.venv\Scripts\python.exe -B -m research.experiments.cifake_cnn.training --output-dir research/experiments/cifake_cnn/outputs/phase3_baseline_reproduction
 ```
 
-The local research environment may be CPU-only. The full CIFAKE training run used a Colab T4 GPU. Select a GPU runtime for substantial training runs.
+The local PyTorch installation may be CPU-only. The original full training was performed on a Google Colab T4 GPU, which is the recommended option for substantial training runs.
 
-## Experiment files
+## Dataset information
 
-- `config.py` — image sizes and training hyperparameters.
-- `model.py` — `CifakeCNN`, parameter counting and shape test.
-- `dataset.py` — CIFAKE loading, label remapping and reproducible split.
-- `training.py` — training/validation loops, checkpointing, early stopping and history.
-- `evaluate.py` — official CIFAKE test evaluation and JSON report.
-- `analysis.py` — training-history analysis.
-- `test_*.py` — focused tests using synthetic data; they do not run full CIFAKE training.
-
-## References and provenance
-
-CIFAKE contains REAL images derived from CIFAR-10 and FAKE images generated using Stable Diffusion 1.4. See `research/dataset-metadata.json` for recorded dataset metadata and the dataset publication details. Preserve the dataset's required attribution when publishing results.
+CIFAKE contains real images derived from CIFAR-10 and AI-generated images produced using Stable Diffusion 1.4. See [dataset-metadata.json](../../dataset-metadata.json) for the recorded dataset information and attribution details.
