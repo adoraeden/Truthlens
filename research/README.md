@@ -1,34 +1,35 @@
 # PRISM Research
 
-This directory contains independent machine-learning experiments and their research-specific resources.
+This folder contains our machine-learning experiments.
 
-## Current experiment
+## Current experiment: CIFAKE CNN
 
-- [CIFAKE CNN](experiments/cifake_cnn/): a convolutional neural network trained from random initialisation to study image features and cross-generator generalisation.
-- [CIFAKE CNN research roadmap](experiments/cifake_cnn/README.md#research-roadmap): completed phases, baseline results, the current generalisation work and planned research.
-- [Dataset metadata](dataset-metadata.json): source metadata for CIFAKE.
-- [Research environment requirements](requirements-research.txt): pinned dependencies for the research environment.
+We built and trained our own CNN to classify images as real or AI-generated.
 
-The CIFAKE dataset is not committed to Git because of its size. Place the downloaded dataset at `research/data/kaggle_image/`, with `train/` and `test/` subdirectories. The experiment's dataset loader expects that location.
+**Current results:**
+- CIFAKE test accuracy: **95.67%**
+- GenImage exploratory sample accuracy: **49.25%**
 
-## Research progress
+The difference between these results shows that the model struggles with images from other sources. Our current focus is improving that generalisation.
 
-| Phase | Focus | Status |
-|---|---|---|
-| 1 | Custom CNN foundation, dataset loader, label mapping and reproducible split | Complete |
-| 2 | Training pipeline, checkpointing, validation and official CIFAKE benchmark | Complete |
-| 3 | Cross-dataset and cross-generator generalisation | Active |
-| 4 | Robustness to compression, resizing, blur, noise and other image transformations | Planned |
-| 5 | Explainability and feature investigation | Planned |
-| 6 | Advanced architectures, feature fusion and calibration research | Planned |
+## Roadmap
 
-The initial CIFAKE baseline reached 95.67% accuracy on the official CIFAKE test split. A separate, small 400-image GenImage diagnostic sample produced 49.25% accuracy and exposed a severe false-positive problem. The sample is a diagnostic reference, not a reliable estimate of real-world performance; the detailed metrics and limitations are documented in the experiment README.
+- [x] **Phase 1 — Build the CNN:** model, dataset loading, labels and data split.
+- [x] **Phase 2 — Train and test:** training pipeline and official CIFAKE evaluation.
+- [ ] **Phase 3 — Improve generalisation:** investigate the failure and test better training data and augmentations.
+- [ ] **Phase 4 — Test image robustness:** compression, resizing, blur, noise and screenshots.
+- [ ] **Phase 5 — Explain the model:** visualise which image regions influence its predictions.
+- [ ] **Phase 6 — Explore advanced models:** architecture comparisons and feature combinations.
+
+For the detailed checklist and results, see the [CIFAKE CNN experiment README](experiments/cifake_cnn/README.md).
+
+## Dataset
+
+The CIFAKE dataset is not stored in Git because of its size. Download it separately and place it in `research/data/kaggle_image/`, with `train/` and `test/` folders.
 
 ## Research principles
 
-- Keep training, validation, development and final evaluation distinct.
-- Do not use the official CIFAKE test split for training or model selection.
-- Do not repeatedly tune against the previously inspected GenImage diagnostic sample.
-- Record dataset provenance, preprocessing, seeds, configurations and per-class metrics.
-- Treat results as evidence about the datasets and conditions tested, not as a guarantee of real-world performance.
-- Keep experimental CNN work independent of the production TruthLens detector until an experiment has been properly evaluated.
+- Keep training, validation and final testing separate.
+- Record the datasets and settings used for each experiment.
+- Report mistakes and limitations as well as good results.
+- Keep research models separate from the production TruthLens detector.
