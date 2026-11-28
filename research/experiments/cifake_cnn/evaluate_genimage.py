@@ -83,6 +83,46 @@ def calculate_metrics(targets, predictions):
     }
 
 
+def build_prediction_report(frame, probabilities, threshold=0.5):
+    """Build a per-image prediction table (REAL=0, FAKE=1).
+
+    ``probabilities`` holds the model's FAKE probability for each manifest
+    row, in the same order as ``frame``.
+    """
+    if len(frame) != len(probabilities):
+        raise ValueError(
+            f"Got {len(probabilities)} probabilities for {len(frame)} images"
+        )
+
+    frame = frame.reset_index(drop=True)
+    probs = [float(p) for p in probabilities]
+    predicted = [int(p >= threshold) for p in probs]
+    actual = frame["label"].astype(int).tolist()
+
+    error_types = []
+    for a, p in zip(actual, predicted):
+        if a == 0 and p == 1:
+            error_types.append("false_positive")
+        elif a == 1 and p == 0:
+            error_types.append("false_negative")
+        else:
+            error_types.append("none")
+
+    return pd.DataFrame({
+        "path": frame["path"],
+        "filename": [Path(p).name for p in frame["path"]],
+        "generator": frame["generator"],
+        "actual_class": frame["class"],
+        "actual_label": actual,
+        "predicted_class": ["ai" if p == 1 else "real" for p in predicted],
+        "predicted_label": predicted,
+        "prob_fake": probs,
+        "confidence": [p if pred == 1 else 1 - p
+                       for p, pred in zip(probs, predicted)],
+        "correct": [a == p for a, p in zip(actual, predicted)],
+        "error_type": error_types,
+    })
+
 def run_evaluation(
     manifest_path,
     checkpoint_path,
