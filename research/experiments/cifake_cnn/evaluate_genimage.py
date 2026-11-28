@@ -130,6 +130,7 @@ def run_evaluation(
     image_size=IMAGE_SIZE_MAIN,
     batch_size=BATCH_SIZE,
     device=None,
+    predictions_path=None,
 ):
     selected_device = select_device() if device is None else torch.device(device)
 
@@ -148,15 +149,18 @@ def run_evaluation(
     targets = []
     predictions = []
     generators = []
+    probabilities = []
 
     with torch.no_grad():
         for images, labels, batch_generators in loader:
             images = images.to(selected_device)
             logits = model(images).reshape(-1)
-            predicted = (torch.sigmoid(logits) >= 0.5).long()
+            batch_probs = torch.sigmoid(logits)
+            predicted = (batch_probs >= 0.5).long()
 
             targets.extend(labels.tolist())
             predictions.extend(predicted.cpu().tolist())
+            probabilities.extend(batch_probs.cpu().tolist())
             generators.extend(batch_generators)
 
     overall = calculate_metrics(targets, predictions)
@@ -186,7 +190,14 @@ def run_evaluation(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-
+    
+    if predictions_path is not None:
+        predictions_path = Path(predictions_path)
+        predictions_path.parent.mkdir(parents=True, exist_ok=True)
+        build_prediction_report(dataset.frame, probabilities).to_csv(
+            predictions_path, index=False
+        )
+        
     return report
 
 
@@ -204,6 +215,13 @@ def main(argv=None):
     parser.add_argument("--image-size", type=int, default=IMAGE_SIZE_MAIN)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--device", default=None)
+    parser.add_argument(
+        "--predictions-output",
+        type=Path,
+        default=Path(
+            "research/experiments/cifake_cnn/outputs/genimage_predictions.csv"
+        ),
+    )
     args = parser.parse_args(argv)
 
     report = run_evaluation(
@@ -213,6 +231,7 @@ def main(argv=None):
         image_size=args.image_size,
         batch_size=args.batch_size,
         device=args.device,
+        predictions_path=args.predictions_output,
     )
     print(json.dumps(report, indent=2))
     print(f"Saved report to {args.output}")

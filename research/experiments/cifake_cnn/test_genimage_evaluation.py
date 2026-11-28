@@ -7,7 +7,9 @@ from research.experiments.cifake_cnn.evaluate_genimage import (
     GenImageManifestDataset,
     build_prediction_report,
     calculate_metrics,
+    run_evaluation,
 )
+from research.experiments.cifake_cnn.model import CifakeCNN
 
 
 def test_calculate_metrics_returns_expected_values():
@@ -112,3 +114,46 @@ def test_build_prediction_report_rejects_length_mismatch():
 
     with pytest.raises(ValueError):
         build_prediction_report(frame, [0.1, 0.9])
+
+
+
+def test_run_evaluation_saves_prediction_csv(tmp_path):
+    rows = []
+    for i, cls in enumerate(["real", "ai", "real", "ai"]):
+        image_path = tmp_path / f"img{i}.png"
+        Image.new("RGB", (64, 64), color=(i * 40, 80, 120)).save(image_path)
+        rows.append({
+            "path": str(image_path),
+            "generator": "TestGenerator",
+            "class": cls,
+            "label": 0 if cls == "real" else 1,
+        })
+
+    manifest_path = tmp_path / "manifest.csv"
+    pd.DataFrame(rows).to_csv(manifest_path, index=False)
+
+    model = CifakeCNN(input_size=64)
+    checkpoint_path = tmp_path / "checkpoint.pt"
+    torch.save(
+        {"epoch": 1, "model_state_dict": model.state_dict()}, checkpoint_path
+    )
+
+    predictions_path = tmp_path / "predictions.csv"
+    run_evaluation(
+        manifest_path,
+        checkpoint_path,
+        tmp_path / "results.json",
+        image_size=64,
+        batch_size=2,
+        device="cpu",
+        predictions_path=predictions_path,
+    )
+
+    report = pd.read_csv(predictions_path, keep_default_na=False)
+
+    assert len(report) == 4
+    assert report["filename"].tolist() == [f"img{i}.png" for i in range(4)]
+    assert set(report["error_type"]) <= {
+        "none", "false_positive", "false_negative"
+    }
+    assert int(report["correct"].sum()) == int((report["error_type"] == "none").sum())
