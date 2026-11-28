@@ -93,3 +93,4 @@ TruthLens/eval_audio*.txt
 TruthLens/eval_audio*.csv
 TruthLens/eval_results*.csv
 TruthLens/reports/genimage_error_review/*.png
+research/experiments/cifake_cnn/outputs/*_predictions.csv
